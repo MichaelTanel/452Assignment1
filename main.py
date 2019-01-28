@@ -1,5 +1,6 @@
 import csv
 from pprint import pprint as pprint
+import pandas as pd
 
 class Neuron(object):
     area = 0
@@ -16,50 +17,40 @@ class Neuron(object):
     weightAsymmetryCoefficient = 0
     lengthGroove = 0
     weightLengthGroove = 0
-    output = ""
+    output = ""    
+
+class MaxValues(object):
+    area = 0
+    perimeter = 0
+    compactness = 0
+    length = 0
+    width = 0
+    asymmetryCoefficient = 0
+    lengthGroove = 0
+
+# Normalizes the data by dividing each data point in each column by the columns max value
+def normalizeData(maxVals, df):
+    df['Area'] = df['Area'] / maxVals.area
+    df['Perimeter'] = df['Perimeter'] / maxVals.perimeter
+    df['Compactness'] = df['Compactness'] / maxVals.compactness
+    df['Length'] = df['Length'] / maxVals.length
+    df['Width'] = df['Width'] / maxVals.width
+    df['AsymmetryCoefficient'] = df['AsymmetryCoefficient'] / maxVals.asymmetryCoefficient
+    df['LengthGroove'] = df['LengthGroove'] / maxVals.lengthGroove
+    print(df)
 
 def importCSV(filename):
-    with open (filename, 'r') as csvfile:
-        rows = csv.reader(csvfile, delimiter=',')
-        maxArea = 0
-        maxPerimeter = 0
-        maxCompactness = 0
-        maxLength = 0
-        maxWidth = 0
-        maxAsymmetryCoefficient = 0
-        maxLengthGroove = 0
-        for row in rows:
-            # use the float() method to get rid of strings
-            neuron = Neuron()
-            
-            neuron.area = float(row[0])
-            if neuron.area > maxArea:
-                maxArea = neuron.area
 
-            neuron.perimeter = float(row[1])            
-            if neuron.perimeter > maxPerimeter:
-                maxPerimeter = neuron.perimeter
+    df = pd.read_csv(filename)
+    maxVals = MaxValues()
+    maxVals.area = max(df['Area']) #you can also use df['column_name']
+    maxVals.perimeter = max(df['Perimeter'])
+    maxVals.compactness = max(df['Compactness'])
+    maxVals.length = max(df['Length'])
+    maxVals.width = max(df['Width'])
+    maxVals.asymmetryCoefficient = max(df['AsymmetryCoefficient'])
+    maxVals.lengthGroove = max(df['LengthGroove'])
 
-            neuron.compactness = float(row[2])
-            if neuron.compactness > maxCompactness:
-                maxCompactness = neuron.compactness
+    normalizeData(maxVals, df)
 
-            neuron.length = float(row[3])            
-            if neuron.length > maxLength:
-                maxLength = neuron.length
-
-            neuron.width = float(row[4])            
-            if neuron.width > maxWidth:
-                maxWidth = neuron.width
-
-            neuron.asymmetryCoefficient = float(row[5])
-            if neuron.asymmetryCoefficient > maxAsymmetryCoefficient:
-                maxAsymmetryCoefficient = neuron.asymmetryCoefficient
-
-            neuron.lengthGroove = float(row[6])
-            if neuron.lengthGroove > maxLengthGroove:
-                maxLengthGroove = neuron.lengthGroove
-        print(maxLength)
-
-
-importCSV('testSeeds.csv')
+importCSV('trainSeeds.csv')
