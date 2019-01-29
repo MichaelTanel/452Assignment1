@@ -6,38 +6,22 @@ from random import uniform
 class Neuron(object):
     def __init__(self):
         self.bias = 1
-        # self.weightBias = uniform(-1, 0)
-        self.weightBias = uniform(-1, 0)
+        self.weightBias = uniform(-1, 1)
         self.area = 0
-        # self.weightArea = uniform(-1, 1)
         self.weightArea = uniform(-1, 1)
         self.perimeter = 0
-        # self.weightPerimeter = uniform(-1, 1)
         self.weightPerimeter = uniform(-1, 1)
         self.compactness = 0
-        # self.weightCompactness = uniform(-1, 1)
         self.weightCompactness = uniform(-1, 1)
         self.length = 0
-        # self.weightLength = uniform(-1, 1)
         self.weightLength = uniform(-1, 1)
         self.width = 0
-        # self.weightWidth = uniform(-1, 1)
         self.weightWidth = uniform(-1, 1)
         self.asymmetryCoefficient = 0
-        # self.weightAsymmetryCoefficient = uniform(-1, 1)
         self.weightAsymmetryCoefficient = uniform(-1, 1)
         self.lengthGroove = 0
-        # self.weightLengthGroove = uniform(-1, 1)
         self.weightLengthGroove = uniform(-1, 1)
-        self.expectedOutput = 0
-        self.output = ""
-
-    # def __init__(self):
-    #     self._weightArea = None
-
-    # @weightArea.setter
-    # def weightArea(self, value):
-    #     self._weightArea = value
+        self.output = 0
 
 class MaxValues(object):
     area = 0
@@ -87,10 +71,10 @@ def calculateOutput(neuron):
 errorCount = 0
 successCount = 0
 
-def calculateNewWeights(combinedOutput, neuron):
-    learningRate = 0.05
+def calculateNewWeights(combinedOutput, neuron, expectedOutput):
+    learningRate = 0.1
 
-    outputDifference = neuron.expectedOutput - combinedOutput
+    outputDifference = expectedOutput - int(combinedOutput)
 
     if outputDifference == 0:
         global successCount
@@ -99,6 +83,7 @@ def calculateNewWeights(combinedOutput, neuron):
         global errorCount
         errorCount += 1
 
+    neuron.weightBias                   = neuron.weightBias + outputDifference * learningRate * neuron.bias
     neuron.weightArea                   = neuron.weightArea + outputDifference * learningRate * neuron.area
     neuron.weightPerimeter              = neuron.weightPerimeter + outputDifference * learningRate * neuron.perimeter
     neuron.weightCompactness            = neuron.weightCompactness + outputDifference * learningRate * neuron.compactness
@@ -116,11 +101,9 @@ def main():
     neuron1 = Neuron()
     neuron2 = Neuron()
 
-    # print("numrows: ", len(df.index))
+    for i in range(0, 1000):
+        print(i)
 
-    for i in range(0, 200):
-        # print("////////////////////////////////////////////////////")
-        # print(i)
         # Iterate over dataframe rows
         for row in df.iterrows():
             # In order to get the data point, must access at [1][n], 0 < n < 8
@@ -133,7 +116,7 @@ def main():
             neuron1.width = row[1][4]
             neuron1.asymmetryCoefficient = row[1][5]
             neuron1.lengthGroove = row[1][6]
-            neuron1.expectedOutput = row[1][7]
+            expectedOutput = row[1][7]
 
             neuron1.output = calculateOutput(neuron1)
 
@@ -149,7 +132,6 @@ def main():
             neuron2.width = row[1][4]
             neuron2.asymmetryCoefficient = row[1][5]
             neuron2.lengthGroove = row[1][6]
-            neuron2.expectedOutput = row[1][7]
 
             neuron2.output = calculateOutput(neuron2)
 
@@ -158,18 +140,21 @@ def main():
             else:
                 neuron2.output = "0"
 
-            combinedOutput = neuron1.output + neuron2.output
-            if combinedOutput == "00":
-                combinedOutput = 1            
-            elif combinedOutput == "01":
-                combinedOutput = 2            
-            elif combinedOutput == "10":
-                combinedOutput = 2
-            else:
-                combinedOutput = 3
+            combinedOutput = neuron1.output + neuron2.output    
+
+            # if combinedOutput == "01":
+            #     combinedOutput = 1
+            # elif combinedOutput == "10":
+            #     combinedOutput = 2
+            # elif combinedOutput == "11":
+            #     combinedOutput = 3
+
+            expectedOutputBinary = format(int(expectedOutput), '02b')
+            if expectedOutput[0] != combinedOutput[0]:
+                neuron1 = calculateNewWeights(combinedOutput, neuron1)
+            elif expectedOutputBinary[1] = neuron1.expectedOutput
 
             # print(neuron1.weightArea)
-            neuron1 = calculateNewWeights(combinedOutput, neuron1)
             # print(neuron1.weightArea)
             neuron2 = calculateNewWeights(combinedOutput, neuron2)
             # print(neuron2.weightArea)
