@@ -4,20 +4,21 @@ import pandas as pd
 
 class Neuron(object):
     area = 0
-    weigthArea = 0
+    weigthArea = 0.5
     perimeter = 0
-    weightPerimeter = 0
+    weightPerimeter = 0.5
     compactness = 0
-    weightCompactness = 0
+    weightCompactness = 0.5
     length = 0
-    weightLength = 0
+    weightLength = 0.5
     width = 0
-    weightWidth = 0
+    weightWidth = 0.5
     asymmetryCoefficient = 0
-    weightAsymmetryCoefficient = 0
+    weightAsymmetryCoefficient = 0.5
     lengthGroove = 0
-    weightLengthGroove = 0
-    output = ""    
+    weightLengthGroove = 0.5
+    expectedOutput = 0
+    output = ""
 
 class MaxValues(object):
     area = 0
@@ -37,10 +38,10 @@ def normalizeData(maxVals, df):
     df['Width'] = df['Width'] / maxVals.width
     df['AsymmetryCoefficient'] = df['AsymmetryCoefficient'] / maxVals.asymmetryCoefficient
     df['LengthGroove'] = df['LengthGroove'] / maxVals.lengthGroove
-    print(df)
+    # print(df)
+    return df
 
 def importCSV(filename):
-
     df = pd.read_csv(filename)
     maxVals = MaxValues()
     maxVals.area = max(df['Area']) #you can also use df['column_name']
@@ -51,6 +52,25 @@ def importCSV(filename):
     maxVals.asymmetryCoefficient = max(df['AsymmetryCoefficient'])
     maxVals.lengthGroove = max(df['LengthGroove'])
 
-    normalizeData(maxVals, df)
+    return normalizeData(maxVals, df)
 
-importCSV('trainSeeds.csv')
+def main():
+    df = importCSV('trainSeeds.csv')
+
+    # Iterate over dataframe rows
+    for row in df.iterrows():
+        # In order to get the data point, must access at [1][n], 0 < n < 8
+        # This is because row[0] gives the row number, row[1] gives the
+        # column name and the data point
+        neuron = Neuron()
+        neuron.area = row[1][0]
+        neuron.perimeter = row[1][1]
+        neuron.compactness = row[1][2]
+        neuron.length = row[1][3]
+        neuron.width = row[1][4]
+        neuron.asymmetryCoefficient = row[1][5]
+        neuron.lengthGroove = row[1][6]
+        neuron.expectedOutput = row[1][7]
+        print('\n------------------------------------------------\n')
+        
+main()
