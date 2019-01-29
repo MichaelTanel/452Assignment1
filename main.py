@@ -84,9 +84,17 @@ def calculateOutput(neuron):
     output += neuron.lengthGroove * neuron.weightLengthGroove
     return output
 
+errorCount = 0
+
 def calculateNewWeights(combinedOutput, neuron):
-    learningRate = 0.6
+    learningRate = 0.1
+
     outputDifference = neuron.expectedOutput - combinedOutput
+
+    if outputDifference != 0:
+        global errorCount
+        errorCount += 1
+
     neuron.weightArea                   = neuron.weightArea + outputDifference * learningRate * neuron.area
     neuron.weightPerimeter              = neuron.weightPerimeter + outputDifference * learningRate * neuron.perimeter
     neuron.weightCompactness            = neuron.weightCompactness + outputDifference * learningRate * neuron.compactness
@@ -104,11 +112,9 @@ def main():
     neuron1 = Neuron()
     neuron2 = Neuron()
 
-    iteration = 1
-
-    for i in range(0, 15):
-        print("////////////////////////////////////////////////////")
-        print(i)
+    for i in range(0, 10):
+        # print("////////////////////////////////////////////////////")
+        # print(i)
         # Iterate over dataframe rows
         for row in df.iterrows():
             # In order to get the data point, must access at [1][n], 0 < n < 8
@@ -159,11 +165,13 @@ def main():
             # print(neuron1.weightArea)
 
             neuron1 = calculateNewWeights(combinedOutput, neuron1)
-            print(neuron1.weightArea)
+            print(neuron2.weightArea)
             neuron2 = calculateNewWeights(combinedOutput, neuron2)
             print(neuron2.weightArea)
-            print("---------------------")
+            # print("---------------------")
 
             # print(neuron1.weightArea)
-
+    successRate = (errorCount * -1) + 16600
+    successRate = float(successRate) / float(16600)
+    print("Success Rate: ", successRate)
 main()
