@@ -85,13 +85,17 @@ def calculateOutput(neuron):
     return output
 
 errorCount = 0
+successCount = 0
 
 def calculateNewWeights(combinedOutput, neuron):
-    learningRate = 0.1
+    learningRate = 0.05
 
     outputDifference = neuron.expectedOutput - combinedOutput
 
-    if outputDifference != 0:
+    if outputDifference == 0:
+        global successCount
+        successCount += 1
+    else:
         global errorCount
         errorCount += 1
 
@@ -112,7 +116,9 @@ def main():
     neuron1 = Neuron()
     neuron2 = Neuron()
 
-    for i in range(0, 10):
+    # print("numrows: ", len(df.index))
+
+    for i in range(0, 200):
         # print("////////////////////////////////////////////////////")
         # print(i)
         # Iterate over dataframe rows
@@ -163,15 +169,24 @@ def main():
                 combinedOutput = 3
 
             # print(neuron1.weightArea)
-
             neuron1 = calculateNewWeights(combinedOutput, neuron1)
-            print(neuron2.weightArea)
+            # print(neuron1.weightArea)
             neuron2 = calculateNewWeights(combinedOutput, neuron2)
-            print(neuron2.weightArea)
+            # print(neuron2.weightArea)
             # print("---------------------")
 
             # print(neuron1.weightArea)
-    successRate = (errorCount * -1) + 16600
-    successRate = float(successRate) / float(16600)
-    print("Success Rate: ", successRate)
+        global errorCount
+        global successCount
+        print(errorCount)
+        print(successCount)
+        print("Success Rate: ", float(successCount) / float(successCount + errorCount))
+        print("-----------------------------------------------")
+        errorCount = 0
+        successCount = 0
+
+    # print(neuron1.weightArea)
+    # successRate = (errorCount * -1) + 16600
+    # successRate = float(successRate) / float(16600)
+    # print("Success Rate: ", successRate)
 main()
