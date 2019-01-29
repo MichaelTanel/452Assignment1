@@ -1,24 +1,34 @@
 import csv
 from pprint import pprint as pprint
 import pandas as pd
-import random
+from random import uniform
 
 class Neuron(object):
     def __init__(self):
+        self.bias = 1
+        # self.weightBias = uniform(-1, 0)
+        self.weightBias = uniform(-1, 0)
         self.area = 0
-        self.weightArea = random.random()
+        # self.weightArea = uniform(-1, 1)
+        self.weightArea = uniform(-1, 1)
         self.perimeter = 0
-        self.weightPerimeter = random.random()
+        # self.weightPerimeter = uniform(-1, 1)
+        self.weightPerimeter = uniform(-1, 1)
         self.compactness = 0
-        self.weightCompactness = random.random()
+        # self.weightCompactness = uniform(-1, 1)
+        self.weightCompactness = uniform(-1, 1)
         self.length = 0
-        self.weightLength = random.random()
+        # self.weightLength = uniform(-1, 1)
+        self.weightLength = uniform(-1, 1)
         self.width = 0
-        self.weightWidth = random.random()
+        # self.weightWidth = uniform(-1, 1)
+        self.weightWidth = uniform(-1, 1)
         self.asymmetryCoefficient = 0
-        self.weightAsymmetryCoefficient = random.random()
+        # self.weightAsymmetryCoefficient = uniform(-1, 1)
+        self.weightAsymmetryCoefficient = uniform(-1, 1)
         self.lengthGroove = 0
-        self.weightLengthGroove = random.random()
+        # self.weightLengthGroove = uniform(-1, 1)
+        self.weightLengthGroove = uniform(-1, 1)
         self.expectedOutput = 0
         self.output = ""
 
@@ -47,7 +57,7 @@ def normalizeData(maxVals, df):
     df['Width'] = df['Width'] / maxVals.width
     df['AsymmetryCoefficient'] = df['AsymmetryCoefficient'] / maxVals.asymmetryCoefficient
     df['LengthGroove'] = df['LengthGroove'] / maxVals.lengthGroove
-    # print(df)
+
     return df
 
 def importCSV(filename):
@@ -63,16 +73,30 @@ def importCSV(filename):
 
     return normalizeData(maxVals, df)
 
-def initializeNeuron(neuron):
-    neuron.weightArea = random.random()
-    neuron.weightPerimeter = random.random()
-    neuron.weightCompactness = random.random()
-    neuron.weightLength = random.random()
-    neuron.weightWidth = random.random()
-    neuron.weightAsymmetryCoefficient = random.random()
-    neuron.weightLengthGroove = random.random()
+def calculateOutput(neuron):
+    output = neuron.bias * neuron.weightBias
+    output += neuron.area * neuron.weightArea
+    output += neuron.perimeter * neuron.weightPerimeter
+    output += neuron.compactness * neuron.weightCompactness
+    output += neuron.length * neuron.weightLength
+    output += neuron.width * neuron.weightWidth
+    output += neuron.asymmetryCoefficient * neuron.weightAsymmetryCoefficient
+    output += neuron.lengthGroove * neuron.weightLengthGroove
+    return output
+
+def calculateNewWeights(combinedOutput, neuron):
+    learningRate = 0.6
+    outputDifference = neuron.expectedOutput - combinedOutput
+    neuron.weightArea                   = neuron.weightArea + outputDifference * learningRate * neuron.area
+    neuron.weightPerimeter              = neuron.weightPerimeter + outputDifference * learningRate * neuron.perimeter
+    neuron.weightCompactness            = neuron.weightCompactness + outputDifference * learningRate * neuron.compactness
+    neuron.weightLength                 = neuron.weightLength + outputDifference * learningRate * neuron.length
+    neuron.weightWidth                  = neuron.weightWidth + outputDifference * learningRate * neuron.width
+    neuron.weightAsymmetryCoefficient   = neuron.weightAsymmetryCoefficient + outputDifference * learningRate * neuron.asymmetryCoefficient
+    neuron.weightLengthGroove           = neuron.weightLengthGroove + outputDifference * learningRate * neuron.lengthGroove
 
     return neuron
+
 
 def main():
     df = importCSV('trainSeeds.csv')
@@ -80,34 +104,66 @@ def main():
     neuron1 = Neuron()
     neuron2 = Neuron()
 
-    print(neuron1.weightArea)
-    print(neuron2.weightArea)
+    iteration = 1
 
-    # Iterate over dataframe rows
-    for row in df.iterrows():
-        # In order to get the data point, must access at [1][n], 0 < n < 8
-        # This is because row[0] gives the row number, row[1] gives the
-        # column name and the data point
-        neuron1.area = row[1][0]
-        neuron1.perimeter = row[1][1]
-        neuron1.compactness = row[1][2]
-        neuron1.length = row[1][3]
-        neuron1.width = row[1][4]
-        neuron1.asymmetryCoefficient = row[1][5]
-        neuron1.lengthGroove = row[1][6]
-        neuron1.expectedOutput = row[1][7]
-        
-        neuron2.area = row[1][0]
-        neuron2.perimeter = row[1][1]
-        neuron2.compactness = row[1][2]
-        neuron2.length = row[1][3]
-        neuron2.width = row[1][4]
-        neuron2.asymmetryCoefficient = row[1][5]
-        neuron2.lengthGroove = row[1][6]
-        neuron2.expectedOutput = row[1][7]
+    for i in range(0, 15):
+        print("////////////////////////////////////////////////////")
+        print(i)
+        # Iterate over dataframe rows
+        for row in df.iterrows():
+            # In order to get the data point, must access at [1][n], 0 < n < 8
+            # This is because row[0] gives the row number, row[1] gives the
+            # column name and the data point
+            neuron1.area = row[1][0]
+            neuron1.perimeter = row[1][1]
+            neuron1.compactness = row[1][2]
+            neuron1.length = row[1][3]
+            neuron1.width = row[1][4]
+            neuron1.asymmetryCoefficient = row[1][5]
+            neuron1.lengthGroove = row[1][6]
+            neuron1.expectedOutput = row[1][7]
 
-        # print(neuron1.area)
-        # print(neuron2.area)
-        # print('\n------------------------------------------------\n')
-        
+            neuron1.output = calculateOutput(neuron1)
+
+            if neuron1.output > 0:
+                neuron1.output = "1"
+            else:
+                neuron1.output = "0"
+
+            neuron2.area = row[1][0]
+            neuron2.perimeter = row[1][1]
+            neuron2.compactness = row[1][2]
+            neuron2.length = row[1][3]
+            neuron2.width = row[1][4]
+            neuron2.asymmetryCoefficient = row[1][5]
+            neuron2.lengthGroove = row[1][6]
+            neuron2.expectedOutput = row[1][7]
+
+            neuron2.output = calculateOutput(neuron2)
+
+            if neuron2.output > 0:
+                neuron2.output = "1"
+            else:
+                neuron2.output = "0"
+
+            combinedOutput = neuron1.output + neuron2.output
+            if combinedOutput == "00":
+                combinedOutput = 1            
+            elif combinedOutput == "01":
+                combinedOutput = 2            
+            elif combinedOutput == "10":
+                combinedOutput = 2
+            else:
+                combinedOutput = 3
+
+            # print(neuron1.weightArea)
+
+            neuron1 = calculateNewWeights(combinedOutput, neuron1)
+            print(neuron1.weightArea)
+            neuron2 = calculateNewWeights(combinedOutput, neuron2)
+            print(neuron2.weightArea)
+            print("---------------------")
+
+            # print(neuron1.weightArea)
+
 main()
