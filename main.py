@@ -6,21 +6,29 @@ from random import uniform
 class Neuron(object):
     def __init__(self):
         self.bias = 1
-        self.weightBias = uniform(-1, 1)
+        self.weightBias = uniform(-1000, 1000)
+        # self.weightBias = 1000
         self.area = 0
         self.weightArea = uniform(-1, 1)
+        # self.weightArea = 1000
         self.perimeter = 0
         self.weightPerimeter = uniform(-1, 1)
+        # self.weightPerimeter = 1000
         self.compactness = 0
         self.weightCompactness = uniform(-1, 1)
+        # self.weightCompactness = 1000
         self.length = 0
         self.weightLength = uniform(-1, 1)
+        # self.weightLength = 1000
         self.width = 0
         self.weightWidth = uniform(-1, 1)
+        # self.weightWidth = 1000
         self.asymmetryCoefficient = 0
         self.weightAsymmetryCoefficient = uniform(-1, 1)
+        # self.weightAsymmetryCoefficient = 1000
         self.lengthGroove = 0
         self.weightLengthGroove = uniform(-1, 1)
+        # self.weightLengthGroove = 1000
         self.output = 0
 
 class MaxValues(object):
@@ -59,6 +67,7 @@ def importCSV(filename):
 
 def calculateOutput(neuron):
     output = neuron.bias * neuron.weightBias
+    print("calcOutput", neuron.weightArea)
     output += neuron.area * neuron.weightArea
     output += neuron.perimeter * neuron.weightPerimeter
     output += neuron.compactness * neuron.weightCompactness
@@ -71,11 +80,12 @@ def calculateOutput(neuron):
 errorCount = 0
 successCount = 0
 
-def calculateNewWeights(combinedOutput, neuron, expectedOutput):
+def calculateNewWeights(value, neuron, expectedOutput):
     learningRate = 0.1
 
-    outputDifference = expectedOutput - int(combinedOutput)
-
+    outputDifference = int(expectedOutput) - int(value)
+    # print("output:", outputDifference)
+    # print("exp, comb", int(expectedOutput), int(combinedOutput))
     if outputDifference == 0:
         global successCount
         successCount += 1
@@ -101,7 +111,7 @@ def main():
     neuron1 = Neuron()
     neuron2 = Neuron()
 
-    for i in range(0, 1000):
+    for i in range(0, 2000):
         print(i)
 
         # Iterate over dataframe rows
@@ -140,23 +150,27 @@ def main():
             else:
                 neuron2.output = "0"
 
-            combinedOutput = neuron1.output + neuron2.output    
-
-            # if combinedOutput == "01":
+            # combinedOutputBinary = neuron1.output + neuron2.output    
+            # print(combinedOutputBinary)
+            # if combinedOutputBinary == "01":
             #     combinedOutput = 1
-            # elif combinedOutput == "10":
+            # elif combinedOutputBinary == "10":
             #     combinedOutput = 2
-            # elif combinedOutput == "11":
+            # elif combinedOutputBinary == "11":
             #     combinedOutput = 3
 
             expectedOutputBinary = format(int(expectedOutput), '02b')
-            if expectedOutput[0] != combinedOutput[0]:
-                neuron1 = calculateNewWeights(combinedOutput, neuron1)
-            elif expectedOutputBinary[1] = neuron1.expectedOutput
+            
+            # print("expectedoutputbinary:", combinedOutputBinary[0], expectedOutput, expectedOutputBinary, expectedOutputBinary[0])
+            # If the expectedOutput is equal to the output of the first node
+            if int(expectedOutputBinary[0]) != neuron1.output:
+                neuron1 = calculateNewWeights(neuron1.output, neuron1, int(expectedOutputBinary[0]))
+            elif int(expectedOutputBinary[1]) != neuron2.output:
+                neuron2 = calculateNewWeights(neuron1.output, neuron2, int(expectedOutputBinary[1]))
+                
 
             # print(neuron1.weightArea)
             # print(neuron1.weightArea)
-            neuron2 = calculateNewWeights(combinedOutput, neuron2)
             # print(neuron2.weightArea)
             # print("---------------------")
 
@@ -170,8 +184,75 @@ def main():
         errorCount = 0
         successCount = 0
 
-    # print(neuron1.weightArea)
-    # successRate = (errorCount * -1) + 16600
-    # successRate = float(successRate) / float(16600)
+    print(neuron1.weightArea)
+
+    df = importCSV('testSeeds.csv')
+
+    successTestCount = 0
+    errorTestCount = 0
+
+    countZeroOne = 0
+    countOneZero = 0
+    countOneOne = 0
+
+    for row in df.iterrows():
+        neuron1.area = row[1][0]
+        neuron1.perimeter = row[1][1]
+        neuron1.compactness = row[1][2]
+        neuron1.length = row[1][3]
+        neuron1.width = row[1][4]
+        neuron1.asymmetryCoefficient = row[1][5]
+        neuron1.lengthGroove = row[1][6]
+        expectedOutput = int(row[1][7])
+
+        neuron1.output = calculateOutput(neuron1)
+
+        if neuron1.output > 0:
+            neuron1.output = "1"
+        else:
+            neuron1.output = "0"
+
+        neuron2.area = row[1][0]
+        neuron2.perimeter = row[1][1]
+        neuron2.compactness = row[1][2]
+        neuron2.length = row[1][3]
+        neuron2.width = row[1][4]
+        neuron2.asymmetryCoefficient = row[1][5]
+        neuron2.lengthGroove = row[1][6]
+
+        neuron2.output = calculateOutput(neuron2)
+
+        if neuron2.output > 0:
+            neuron2.output = "1"
+        else:
+            neuron2.output = "0"
+
+        combinedOutputBinary = neuron1.output + neuron2.output    
+        print(combinedOutputBinary)
+        combinedOutput = 0
+        if combinedOutputBinary == "01":
+            countZeroOne += 1
+            print("in 01")
+            combinedOutput = 1
+        elif combinedOutputBinary == "10":
+            countOneZero += 1
+            print("in 10")
+            combinedOutput = 2
+        elif combinedOutputBinary == "11":
+            countOneOne += 1
+            print("in 11")
+            combinedOutput = 3
+        
+        if expectedOutput == combinedOutput:
+            successTestCount += 1
+        else:
+            errorTestCount += 1
+    print("===================================================")
+    print("Success: ", successTestCount)
+    print("Error: ", errorTestCount)
+    print("01: ", countZeroOne)
+    print("10: ", countOneZero)
+    print("11: ", countOneOne)
+    print("Success rate: ", float(successTestCount) / (successTestCount + errorTestCount))
     # print("Success Rate: ", successRate)
 main()
