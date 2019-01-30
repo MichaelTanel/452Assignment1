@@ -91,9 +91,14 @@ def train():
     weights1 = [uniform(-1, 1) for _ in range(8)]
     weights2 = [uniform(-1, 1) for _ in range(8)]
     
+    print(weights1)
+    print(weights2)
+
     for i in range(0, 300):    
         errorCount = 0
         totalCount = 0
+
+        # TODO: add exit if success rate is too high
 
         # Lists to store activation value, output, and expected output 
         errorNeuron1 = []
