@@ -53,23 +53,12 @@ def calculateNewWeights(weights, values, output, expectedOutput):
     learningRate = 0.5
     outputDifference = int(expectedOutput) - int(output)
 
-    weights[0] = weights[i] + outputDifference * learningRate * 1
+    weights[0] = weights[0] + outputDifference * learningRate * 1
 
-    for i in range(len(weights)):
-        weights[i] = weights[i] + outputDifference * learningRate * values[i]
+    for i in range(len(values) - 1):
+        weights[i + 1] = weights[i + 1] + outputDifference * learningRate * values[i]
 
-        activationValue += values[i] * weights[i]
-
-    neuron.weightBias                   = neuron.weightBias + outputDifference * learningRate * neuron.bias
-    neuron.weightArea                   = neuron.weightArea + outputDifference * learningRate * neuron.area
-    neuron.weightPerimeter              = neuron.weightPerimeter + outputDifference * learningRate * neuron.perimeter
-    neuron.weightCompactness            = neuron.weightCompactness + outputDifference * learningRate * neuron.compactness
-    neuron.weightLength                 = neuron.weightLength + outputDifference * learningRate * neuron.length
-    neuron.weightWidth                  = neuron.weightWidth + outputDifference * learningRate * neuron.width
-    neuron.weightAsymmetryCoefficient   = neuron.weightAsymmetryCoefficient + outputDifference * learningRate * neuron.asymmetryCoefficient
-    neuron.weightLengthGroove           = neuron.weightLengthGroove + outputDifference * learningRate * neuron.lengthGroove
-
-    return neuron
+    return weights
 
 # Retrieves data from row
 def parseRow(row):
@@ -102,7 +91,7 @@ def main():
     weights1 = [uniform(-1, 1) for _ in range(8)]
     weights2 = [uniform(-1, 1) for _ in range(8)]
     
-    for i in range(0, 1):    
+    for i in range(0, 40):    
         errorCount = 0
         totalCount = 0
 
@@ -138,14 +127,16 @@ def main():
         # List not empty
         if errorNeuron1:
             errorNeuron1.sort(key=lambda tup: abs(tup[0]))  # sorts in place
-            weights1 = calculateNewWeights(weights1, errorNeuron1[0][1], errorNeuron1[0][2])
+            weights1 = calculateNewWeights(weights1, values, errorNeuron1[0][1], errorNeuron1[0][2])
 
         # if errorNeuron2:
             errorNeuron2.sort(key=lambda tup: abs(tup[0]))  # sorts in place
-            weights2 = calculateNewWeights(weights2, errorNeuron2[0][1], errorNeuron2[0][2])
+            weights2 = calculateNewWeights(weights2, values, errorNeuron2[0][1], errorNeuron2[0][2])
 
         errorNeuron1 = []
         errorNeuron2 = []
+
+        print("success rate: ", (float(totalCount) - float(errorCount)) / float(totalCount))
 
     df = importCSV('testSeeds.csv')
 
