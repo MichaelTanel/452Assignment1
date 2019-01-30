@@ -82,21 +82,16 @@ def calculateOutput(neuron):
 
 errorCount = 0
 successCount = 0
+totalCount = 0
 
-def calculateNewWeights(actual, neuron, expectedOutput):
+def calculateNewWeights(neuron, expectedOutput):
     learningRate = 0.5
-
-    outputDifference = int(expectedOutput) - int(actual)
-
-    if outputDifference == 0:
-        global successCount
-        successCount += 1
-    else:
-        global errorCount
-        errorCount += 1
-
+    # print(neuron.weightArea)
+    outputDifference = int(expectedOutput) - int(neuron.output)
+    # print(outputDifference)
     neuron.weightBias                   = neuron.weightBias + outputDifference * learningRate * neuron.bias
     neuron.weightArea                   = neuron.weightArea + outputDifference * learningRate * neuron.area
+    # print(neuron.weightArea)
     neuron.weightPerimeter              = neuron.weightPerimeter + outputDifference * learningRate * neuron.perimeter
     neuron.weightCompactness            = neuron.weightCompactness + outputDifference * learningRate * neuron.compactness
     neuron.weightLength                 = neuron.weightLength + outputDifference * learningRate * neuron.length
@@ -126,11 +121,17 @@ def main():
 
     errorNeuron1 = []
     errorNeuron2 = []
-    for i in range(0, 1):
-        # Iterate over dataframe rows
+
+    global errorCount
+    global totalCount
+
+    for i in range(0, 75):    
+        errorCount = 0
+        totalCount = 0
+        # Iterate over dataframe row
         for row in df.iterrows():
+
             neuron1 = parseRow(neuron1, row)
-            print(neuron1.area)
             neuron1 = calculateOutput(neuron1)
 
             expectedOutput = row[1][7]
@@ -140,29 +141,36 @@ def main():
 
             expectedOutputBinary = format(int(expectedOutput), '02b')
             
-            # If the expectedOutput is equal to the output of the first node
+            # If the expectedOutput first bit is equal to the output of the first node
             if int(expectedOutputBinary[0]) != neuron1.output:
-                errorNeuron1.append(neuron1)
-                # neuron1 = calculateNewWeights(neuron1.output, neuron1, int(expectedOutputBinary[0]))
-            elif int(expectedOutputBinary[1]) != neuron2.output:
-                errorNeuron2.append(neuron2)
-                # neuron2 = calculateNewWeights(neuron1.output, neuron2, int(expectedOutputBinary[1]))
-        
-        errorNeuron1.sort(key=lambda x: x.activationValue)
-        print(len(errorNeuron1))
-        print(errorNeuron1[0].activationValue)
-        print(errorNeuron1[54].activationValue)
+                errorNeuron1.append((neuron1.activationValue, int(expectedOutputBinary[0]), row))
+            
+            # If the expectedOutput second bit is equal to the output of the second node
+            if int(expectedOutputBinary[1]) != neuron2.output:
+                errorNeuron2.append((neuron2.activationValue, int(expectedOutputBinary[1]), row))
 
-        global errorCount
-        global successCount
-        # print(errorCount)
-        # print(successCount)
-        # print("Success Rate: ", float(successCount) / float(successCount + errorCount))
-        print("-----------------------------------------------")
-        errorCount = 0
-        successCount = 0
+            if int(expectedOutputBinary[0]) != neuron1.output or int(expectedOutputBinary[1]) != neuron2.output:
+                errorCount += 1
 
-    # print(neuron1.weightArea)
+            totalCount += 1
+
+        print("Success rate: ", (float(totalCount) - float(errorCount)) / float(totalCount))
+        # List not empty
+        if errorNeuron1:
+            errorNeuron1.sort(key=lambda tup: abs(tup[0]))  # sorts in place
+            print(neuron1.area)
+            neuron1 = parseRow(neuron1, errorNeuron1[0][2])
+            print(neuron1.area)
+            print("----------------------")
+            neuron1 = calculateNewWeights(neuron1, errorNeuron1[0][1])
+
+        if errorNeuron2:
+            errorNeuron2.sort(key=lambda tup: abs(tup[0]))  # sorts in place
+            neuron2 = parseRow(neuron2, errorNeuron2[0][2])
+            neuron2 = calculateNewWeights(neuron2, errorNeuron2[0][1])
+
+        errorNeuron1 = []
+        errorNeuron2 = []
 
     df = importCSV('testSeeds.csv')
 
