@@ -1,37 +1,18 @@
 import csv
-from pprint import pprint as pprint
 import pandas as pd
 from random import uniform
 
-class Neuron(object):
-    def __init__(self):
-        self.bias = 1.0
-        self.weightBias = uniform(-1, 1)
-        # self.weightBias = 1000
-        self.area = 0.0
-        self.weightArea = uniform(-1, 1)
-        # self.weightArea = 1000
-        self.perimeter = 0.0
-        self.weightPerimeter = uniform(-1, 1)
-        # self.weightPerimeter = 1000
-        self.compactness = 0.0
-        self.weightCompactness = uniform(-1, 1)
-        # self.weightCompactness = 1000
-        self.length = 0.0
-        self.weightLength = uniform(-1, 1)
-        # self.weightLength = 1000
-        self.width = 0.0
-        self.weightWidth = uniform(-1, 1)
-        # self.weightWidth = 1000
-        self.asymmetryCoefficient = 0.0
-        self.weightAsymmetryCoefficient = uniform(-1, 1)
-        # self.weightAsymmetryCoefficient = 1000
-        self.lengthGroove = 0.0
-        self.weightLengthGroove = uniform(-1, 1)
-        # self.weightLengthGroove = 1000
-        self.activationValue = 0.0
-        self.output = 0
+from sklearn import datasets
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import Perceptron
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+import numpy as np
 
+successCount = 0
+totalCount = 0
+
+# Object to store the max values from each column
 class MaxValues(object):
     area = 0
     perimeter = 0
@@ -52,6 +33,7 @@ def normalizeData(maxVals, df):
     df['LengthGroove']          = df['LengthGroove'] / maxVals.lengthGroove
     return df
 
+# Used column headers to easily import the data in columns for more efficient normalizing
 def importCSV(filename):
     df = pd.read_csv(filename)
     maxVals = MaxValues()
@@ -65,180 +47,216 @@ def importCSV(filename):
 
     return normalizeData(maxVals, df)
 
-# Calculates the output, 0 or 1, for the neuron
-def calculateOutput(neuron):
-    activationValue = neuron.bias * neuron.weightBias
-    activationValue += neuron.area * neuron.weightArea
-    activationValue += neuron.perimeter * neuron.weightPerimeter
-    activationValue += neuron.compactness * neuron.weightCompactness
-    activationValue += neuron.length * neuron.weightLength
-    activationValue += neuron.width * neuron.weightWidth
-    activationValue += neuron.asymmetryCoefficient * neuron.weightAsymmetryCoefficient
-    activationValue += neuron.lengthGroove * neuron.weightLengthGroove
-    
-    neuron.activationValue = activationValue
-    neuron.output = 1 if activationValue >= 0 else 0
-    return neuron
+# Calculates the activation value for the neuron
+def calculateActivationValue(values, weights):
+    # Bias weight * bias value (1)
+    activationValue = weights[0]
 
-errorCount = 0
-successCount = 0
-totalCount = 0
+    for i in range(len(values)):
+        activationValue += values[i] * weights[i + 1]
 
-def calculateNewWeights(neuron, expectedOutput):
-    learningRate = 0.5
-    # print(neuron.weightArea)
-    outputDifference = int(expectedOutput) - int(neuron.output)
-    # print(outputDifference)
-    neuron.weightBias                   = neuron.weightBias + outputDifference * learningRate * neuron.bias
-    neuron.weightArea                   = neuron.weightArea + outputDifference * learningRate * neuron.area
-    # print(neuron.weightArea)
-    neuron.weightPerimeter              = neuron.weightPerimeter + outputDifference * learningRate * neuron.perimeter
-    neuron.weightCompactness            = neuron.weightCompactness + outputDifference * learningRate * neuron.compactness
-    neuron.weightLength                 = neuron.weightLength + outputDifference * learningRate * neuron.length
-    neuron.weightWidth                  = neuron.weightWidth + outputDifference * learningRate * neuron.width
-    neuron.weightAsymmetryCoefficient   = neuron.weightAsymmetryCoefficient + outputDifference * learningRate * neuron.asymmetryCoefficient
-    neuron.weightLengthGroove           = neuron.weightLengthGroove + outputDifference * learningRate * neuron.lengthGroove
+    return activationValue
 
-    return neuron
+# Calculating the new weights using the error correction learning technique
+def calculateNewWeights(output, weights, values, expectedOutput):
+    learningRate = 0.1
+    outputDifference = int(expectedOutput) - int(output)
+
+    # Calculates the new bias weight, with a bias value of 1 
+    weights[0] = weights[0] + outputDifference * learningRate * 1
+
+    # Caclulate the new weights for the other criteria
+    for i in range(len(values)):
+        weights[i + 1] = weights[i + 1] + outputDifference * learningRate * values[i]
+
+    return weights
 
 # Retrieves data from row
-def parseRow(neuron, row):
-    neuron.area = float(row[1][0])
-    neuron.perimeter = float(row[1][1])
-    neuron.compactness = float(row[1][2])
-    neuron.length = float(row[1][3])
-    neuron.width = float(row[1][4])
-    neuron.asymmetryCoefficient = float(row[1][5])
-    neuron.lengthGroove = float(row[1][6])
+def parseRow(row):
+    values = []
+    values.append(float(row[1][1]))
+    values.append(float(row[1][2]))
+    values.append(float(row[1][3]))
+    values.append(float(row[1][4]))
+    values.append(float(row[1][5]))
+    values.append(float(row[1][6]))
+    values.append(float(row[1][7]))
 
-    return neuron
+    return values
 
-def main():
+# Calculates the output value for each neuron
+def calculateOutput(activation):
+    return 1 if activation > 0 else 0
+
+def train():
     df = importCSV('trainSeeds.csv')
 
-    neuron1 = Neuron()
-    neuron2 = Neuron()
-
-    errorNeuron1 = []
-    errorNeuron2 = []
-
-    global errorCount
     global totalCount
+    global successCount
 
-    for i in range(0, 75):    
+    weights1 = []
+    weights2 = []
+    values = []
+
+    weights1 = [uniform(-1, 1) for _ in range(8)]
+    weights2 = [uniform(-1, 1) for _ in range(8)]
+    
+    # Wipes the existing file first
+    open('output.txt', 'w')
+    # Appends to new file
+    with open('output.txt', 'a') as outputFile:
+        outputFile.write("Initial weight 1: ")
+        outputFile.write(str(weights1))
+        outputFile.write("\nInitial weight 2: ")
+        outputFile.write(str(weights2))
+        
+    iterations = 3000
+    trainThreshold = 25
+
+    with open('output.txt', 'a') as outputFile:
+        outputFile.write("\nIterations: ")
+        outputFile.write(str(iterations))
+        termCriteria = "\nTermination criteria: The termination criteria used is the program will run for the number of iterations specified"
+        termCriteria += ", or until the success rate is above 90%% for %d runthroughs of the data." % trainThreshold
+        outputFile.write(termCriteria)
+
+    successRate = 0
+    trained = 0
+
+    for i in range(0, iterations):
+
+        # If the successRate is greater than 90% 15 times, the NN is considered to be trained, and
+        # the training will stop to prevent overtraining.
+        if successRate > 0.9:
+            trained += 1
+            if (trained == trainThreshold):
+                print("Trained:", trained)
+                break
+
         errorCount = 0
         totalCount = 0
+        successCount = 0
+        successRate = 0
+
+        # Lists to store activation value, output, and expected output 
+        errorNeuron1 = []
+        errorNeuron2 = []
+        
         # Iterate over dataframe row
         for row in df.iterrows():
+            values = parseRow(row)
+            activation1 = calculateActivationValue(values, weights1)
+            activation2 = calculateActivationValue(values, weights2)
 
-            neuron1 = parseRow(neuron1, row)
-            neuron1 = calculateOutput(neuron1)
+            output1 = calculateOutput(activation1)
+            output2 = calculateOutput(activation2)
 
-            expectedOutput = row[1][7]
-
-            neuron2 = parseRow(neuron2, row)
-            neuron2 = calculateOutput(neuron2)
-
-            expectedOutputBinary = format(int(expectedOutput), '02b')
-            
+            # values[-1] contains the expected result
+            expectedOutputBinary = format(int(values[-1]), '02b')
+ 
             # If the expectedOutput first bit is equal to the output of the first node
-            if int(expectedOutputBinary[0]) != neuron1.output:
-                errorNeuron1.append((neuron1.activationValue, int(expectedOutputBinary[0]), row))
-            
-            # If the expectedOutput second bit is equal to the output of the second node
-            if int(expectedOutputBinary[1]) != neuron2.output:
-                errorNeuron2.append((neuron2.activationValue, int(expectedOutputBinary[1]), row))
+            if int(expectedOutputBinary[0]) != output1:
+                weights1copy = weights1
+                valuesCopy = values                
+                errorNeuron1.append((activation1, output1, weights1copy, valuesCopy, int(expectedOutputBinary[0])))
 
-            if int(expectedOutputBinary[0]) != neuron1.output or int(expectedOutputBinary[1]) != neuron2.output:
-                errorCount += 1
+            # If the expectedOutput second bit is equal to the output of the second node
+            if int(expectedOutputBinary[1]) != output2:
+                weights2copy = weights2
+                valuesCopy = values
+                errorNeuron2.append((activation2, output2, weights2copy, valuesCopy, int(expectedOutputBinary[1])))
+
+            # If either of the outputs match their corresponding bit in the expected output,
+            # increase the success count.
+            if int(expectedOutputBinary[0]) == output1 and int(expectedOutputBinary[1]) == output2:
+                successCount += 1
 
             totalCount += 1
 
-        print("Success rate: ", (float(totalCount) - float(errorCount)) / float(totalCount))
+        # print(successCount)
+        # print(totalCount - successCount)
+        # print(totalCount)
+        successRate = float(successCount) / float(totalCount)
+        print("Success rate: ", successRate)
+
         # List not empty
-        if errorNeuron1:
+        if len(errorNeuron1) != 0:
+            # Sorts to get the closest possible value to 0 as the first element, then use that to adjust the weights            
             errorNeuron1.sort(key=lambda tup: abs(tup[0]))  # sorts in place
-            print(neuron1.area)
-            neuron1 = parseRow(neuron1, errorNeuron1[0][2])
-            print(neuron1.area)
-            print("----------------------")
-            neuron1 = calculateNewWeights(neuron1, errorNeuron1[0][1])
+            weights1 = calculateNewWeights(errorNeuron1[0][1], errorNeuron1[0][2], errorNeuron1[0][3], errorNeuron1[0][4])
 
-        if errorNeuron2:
+        # List not empty
+        if len(errorNeuron2) != 0:
+            # Sorts to get the closest possible value to 0 as the first element, then use that to adjust the weights
             errorNeuron2.sort(key=lambda tup: abs(tup[0]))  # sorts in place
-            neuron2 = parseRow(neuron2, errorNeuron2[0][2])
-            neuron2 = calculateNewWeights(neuron2, errorNeuron2[0][1])
+            weights2 = calculateNewWeights(errorNeuron2[0][1], errorNeuron2[0][2], errorNeuron2[0][3], errorNeuron2[0][4])
 
-        errorNeuron1 = []
-        errorNeuron2 = []
+        print("--------------------------------------------")
 
+    return (weights1, weights2)
+
+def test(weights1, weights2):
     df = importCSV('testSeeds.csv')
 
     successTestCount = 0
-    errorTestCount = 0
+    totalCount = 0
 
-    countZeroOne = 0
-    countOneZero = 0
-    countOneOne = 0
+    with open('output.txt', 'a') as outputFile:
+        outputFile.write("\n\nOriginal\tPredicted\n")
 
+    # Iterate over dataframe row
     for row in df.iterrows():
-        neuron1.area = row[1][0]
-        neuron1.perimeter = row[1][1]
-        neuron1.compactness = row[1][2]
-        neuron1.length = row[1][3]
-        neuron1.width = row[1][4]
-        neuron1.asymmetryCoefficient = row[1][5]
-        neuron1.lengthGroove = row[1][6]
-        expectedOutput = int(row[1][7])
 
-        neuron1.output = calculateOutput(neuron1)
+        values = parseRow(row)
+        activation1 = calculateActivationValue(values, weights1)
+        activation2 = calculateActivationValue(values, weights2)
 
-        if neuron1.output > 0:
-            neuron1.output = "1"
-        else:
-            neuron1.output = "0"
+        output1 = calculateOutput(activation1)
+        output2 = calculateOutput(activation2)
 
-        neuron2.area = row[1][0]
-        neuron2.perimeter = row[1][1]
-        neuron2.compactness = row[1][2]
-        neuron2.length = row[1][3]
-        neuron2.width = row[1][4]
-        neuron2.asymmetryCoefficient = row[1][5]
-        neuron2.lengthGroove = row[1][6]
+        # values[-1] contains the expected result
+        expectedOutputBinary = format(int(values[-1]), '02b')
 
-        neuron2.output = calculateOutput(neuron2)
-
-        if neuron2.output > 0:
-            neuron2.output = "1"
-        else:
-            neuron2.output = "0"
-
-        combinedOutputBinary = neuron1.output + neuron2.output    
-        # print(combinedOutputBinary)
-        combinedOutput = 0
-        if combinedOutputBinary == "01":
-            countZeroOne += 1
-            # print("in 01")
-            combinedOutput = 1
-        elif combinedOutputBinary == "10":
-            countOneZero += 1
-            # print("in 10")
-            combinedOutput = 2
-        elif combinedOutputBinary == "11":
-            countOneOne += 1
-            # print("in 11")
-            combinedOutput = 3
-        
-        if expectedOutput == combinedOutput:
+        # If either of the outputs did not match their corresponding bit in the expected output,
+        # increase the error.
+        if int(expectedOutputBinary[0]) == output1 and int(expectedOutputBinary[1]) == output2:
             successTestCount += 1
-        else:
-            errorTestCount += 1
-    print("===================================================")
-    print("Success: ", successTestCount)
-    print("Error: ", errorTestCount)
-    print("01: ", countZeroOne)
-    print("10: ", countOneZero)
-    print("11: ", countOneOne)
-    print("Success rate: ", float(successTestCount) / (successTestCount + errorTestCount))
-    # print("Success Rate: ", successRate)
+
+        with open('output.txt', 'a') as outputFile:
+            output = output1 + output2
+            outputFile.write("%d" % int(values[-1]))
+            outputFile.write("\t\t\t%s\n" % output)
+
+        totalCount += 1
+    
+    print("============================")
+    print("Testing")
+    print("============================")
+
+    print("Success Count: ", successTestCount)
+    print("Total Count: ", totalCount)    
+    print("Success Rate: ", float(successTestCount) / float(totalCount))
+
+def main():
+    (weights1, weights2) = train()
+    test(weights1, weights2)
+    with open('output.txt', 'a') as outputFile:
+        outputFile.write("\nFinal weight 1: ")
+        outputFile.write(str(weights1))
+        outputFile.write("\nFinal weight 2: ")
+        outputFile.write(str(weights2))
+
+    externalToolTraining()
+
+# Training perceptron using Scikit
+def externalToolTraining():
+    trainingData = np.loadtxt('trainSeeds.csv', delimiter=',') # load csv file into numpy array
+    testData = np.loadtxt('testSeeds.csv', delimiter=',')
+
+    trainingInputData = trainingData[:, :-1]
+    trainingDesiredOutput = trainingData[:, -1]
+
+    testInputData = testData[:, :-1]
+    testDesiredOutput = testData[:, -1]
+
 main()
