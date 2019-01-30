@@ -2,6 +2,13 @@ import csv
 import pandas as pd
 from random import uniform
 
+from sklearn import datasets
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import Perceptron
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+import numpy as np
+
 successCount = 0
 totalCount = 0
 
@@ -42,7 +49,9 @@ def importCSV(filename):
 
 # Calculates the activation value for the neuron
 def calculateActivationValue(values, weights):
-    activationValue = 0
+    # Bias weight * bias value (1)
+    activationValue = weights[0]
+
     for i in range(len(values)):
         activationValue += values[i] * weights[i + 1]
 
@@ -50,7 +59,7 @@ def calculateActivationValue(values, weights):
 
 # Calculating the new weights using the error correction learning technique
 def calculateNewWeights(output, weights, values, expectedOutput):
-    learningRate = 0.4
+    learningRate = 0.1
     outputDifference = int(expectedOutput) - int(output)
 
     # Calculates the new bias weight, with a bias value of 1 
@@ -77,12 +86,13 @@ def parseRow(row):
 
 # Calculates the output value for each neuron
 def calculateOutput(activation):
-    return 1 if activation >= 0 else 0
+    return 1 if activation > 0 else 0
 
 def train():
     df = importCSV('trainSeeds.csv')
 
     global totalCount
+    global successCount
 
     weights1 = []
     weights2 = []
@@ -91,14 +101,42 @@ def train():
     weights1 = [uniform(-1, 1) for _ in range(8)]
     weights2 = [uniform(-1, 1) for _ in range(8)]
     
-    print(weights1)
-    print(weights2)
+    # Wipes the existing file first
+    open('output.txt', 'w')
+    # Appends to new file
+    with open('output.txt', 'a') as outputFile:
+        outputFile.write("Initial weight 1: ")
+        outputFile.write(str(weights1))
+        outputFile.write("\nInitial weight 2: ")
+        outputFile.write(str(weights2))
+        
+    iterations = 3000
+    trainThreshold = 25
 
-    for i in range(0, 300):    
+    with open('output.txt', 'a') as outputFile:
+        outputFile.write("\nIterations: ")
+        outputFile.write(str(iterations))
+        termCriteria = "\nTermination criteria: The termination criteria used is the program will run for the number of iterations specified"
+        termCriteria += ", or until the success rate is above 90%% for %d runthroughs of the data." % trainThreshold
+        outputFile.write(termCriteria)
+
+    successRate = 0
+    trained = 0
+
+    for i in range(0, iterations):
+
+        # If the successRate is greater than 90% 15 times, the NN is considered to be trained, and
+        # the training will stop to prevent overtraining.
+        if successRate > 0.9:
+            trained += 1
+            if (trained == trainThreshold):
+                print("Trained:", trained)
+                break
+
         errorCount = 0
         totalCount = 0
-
-        # TODO: add exit if success rate is too high
+        successCount = 0
+        successRate = 0
 
         # Lists to store activation value, output, and expected output 
         errorNeuron1 = []
@@ -106,7 +144,6 @@ def train():
         
         # Iterate over dataframe row
         for row in df.iterrows():
-
             values = parseRow(row)
             activation1 = calculateActivationValue(values, weights1)
             activation2 = calculateActivationValue(values, weights2)
@@ -129,17 +166,18 @@ def train():
                 valuesCopy = values
                 errorNeuron2.append((activation2, output2, weights2copy, valuesCopy, int(expectedOutputBinary[1])))
 
-            # If either of the outputs did not match their corresponding bit in the expected output,
-            # increase the error.
-            if int(expectedOutputBinary[0]) != output1 and int(expectedOutputBinary[1]) != output2:
-                errorCount += 1
+            # If either of the outputs match their corresponding bit in the expected output,
+            # increase the success count.
+            if int(expectedOutputBinary[0]) == output1 and int(expectedOutputBinary[1]) == output2:
+                successCount += 1
 
             totalCount += 1
 
-        print(totalCount - errorCount)
-        print(errorCount)
-        print(totalCount)
-        print("Success rate: ", (float(totalCount) - float(errorCount)) / float(totalCount))
+        # print(successCount)
+        # print(totalCount - successCount)
+        # print(totalCount)
+        successRate = float(successCount) / float(totalCount)
+        print("Success rate: ", successRate)
 
         # List not empty
         if len(errorNeuron1) != 0:
@@ -161,9 +199,10 @@ def test(weights1, weights2):
     df = importCSV('testSeeds.csv')
 
     successTestCount = 0
-    errorTestCount = 0
-
     totalCount = 0
+
+    with open('output.txt', 'a') as outputFile:
+        outputFile.write("\n\nOriginal\tPredicted\n")
 
     # Iterate over dataframe row
     for row in df.iterrows():
@@ -183,8 +222,17 @@ def test(weights1, weights2):
         if int(expectedOutputBinary[0]) == output1 and int(expectedOutputBinary[1]) == output2:
             successTestCount += 1
 
+        with open('output.txt', 'a') as outputFile:
+            output = output1 + output2
+            outputFile.write("%d" % int(values[-1]))
+            outputFile.write("\t\t\t%s\n" % output)
+
         totalCount += 1
     
+    print("============================")
+    print("Testing")
+    print("============================")
+
     print("Success Count: ", successTestCount)
     print("Total Count: ", totalCount)    
     print("Success Rate: ", float(successTestCount) / float(totalCount))
@@ -192,7 +240,23 @@ def test(weights1, weights2):
 def main():
     (weights1, weights2) = train()
     test(weights1, weights2)
-    print(weights1)
-    print("-----------")
-    print(weights2)
+    with open('output.txt', 'a') as outputFile:
+        outputFile.write("\nFinal weight 1: ")
+        outputFile.write(str(weights1))
+        outputFile.write("\nFinal weight 2: ")
+        outputFile.write(str(weights2))
+
+    externalToolTraining()
+
+# Training perceptron using Scikit
+def externalToolTraining():
+    trainingData = np.loadtxt('trainSeeds.csv', delimiter=',') # load csv file into numpy array
+    testData = np.loadtxt('testSeeds.csv', delimiter=',')
+
+    trainingInputData = trainingData[:, :-1]
+    trainingDesiredOutput = trainingData[:, -1]
+
+    testInputData = testData[:, :-1]
+    testDesiredOutput = testData[:, -1]
+
 main()
