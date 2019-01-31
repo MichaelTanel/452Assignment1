@@ -8,6 +8,7 @@ from sklearn.linear_model import Perceptron
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import recall_score
 from sklearn.metrics import precision_score
+from sklearn.metrics import confusion_matrix
 
 successCount = 0
 totalCount = 0
@@ -204,6 +205,11 @@ def test(weights1, weights2):
     with open('output.txt', 'a') as outputFile:
         outputFile.write("\n\nOriginal\tPredicted\n")
 
+    # Lists to hold the expected and actual output.
+    # Used when calculating percision and recall.
+    expectedOutputList = []
+    actualOutputList = []
+
     # Iterate over dataframe row
     for row in df.iterrows():
 
@@ -222,6 +228,16 @@ def test(weights1, weights2):
         if int(expectedOutputBinary[0]) == output1 and int(expectedOutputBinary[1]) == output2:
             successTestCount += 1
 
+        # Convert 2 outputs to decimal value
+        if output1 == 0 and output2 == 1:
+            expectedOutputList.append(1)
+        elif output1 == 1 and output2 == 0:
+            expectedOutputList.append(2)
+        elif output1 == 1 and output2 == 1:
+            expectedOutputList.append(3)
+        
+        actualOutputList.append(int(values[-1]))
+
         with open('output.txt', 'a') as outputFile:
             output = output1 + output2
             outputFile.write("%d" % int(values[-1]))
@@ -238,21 +254,22 @@ def test(weights1, weights2):
     successRate = float(successTestCount) / float(totalCount)
     print("Success Rate: %.2f", successRate)
 
-    return successRate
+    return (expectedOutputList, actualOutputList)
 
 def main():
     (weights1, weights2) = train()
-    percisionValue = test(weights1, weights2)
+    (expectedOutputList, actualOutputList) = test(weights1, weights2)
     with open('output.txt', 'a') as outputFile:
         outputFile.write("\nFinal weight 1: ")
         outputFile.write(str(weights1))
         outputFile.write("\nFinal weight 2: ")
         outputFile.write(str(weights2))
 
-    externalToolTraining(percisionValue)
+    externalToolTraining(expectedOutputList, actualOutputList)
 
 # Training perceptron using Scikit
-def externalToolTraining(percision):
+def externalToolTraining(expectedOutputList, actualOutputList):
+    # Added skip rows due to the addition of headers in the csvs.
     trainingData = np.loadtxt('trainSeeds.csv', delimiter=',', skiprows=1)
     testData = np.loadtxt('testSeeds.csv', delimiter=',', skiprows=1)
 
@@ -266,15 +283,20 @@ def externalToolTraining(percision):
     # Removing all columns except last column
     testDesiredOutput = testData[:, -1]
 
+    # Using scikit learn
     ss = StandardScaler()
     ss.fit(trainingInputData)
-
     train = ss.transform(trainingInputData)
     test = ss.transform(testInputData)
     perceptron = Perceptron(n_iter=40, eta0=0.1, random_state=0)
     perceptron.fit(train, trainingDesiredOutput)
 
     prediction = perceptron.predict(test)
+
+    # Calculating percision and recall of my code
+    (tn, fp, fn, tp) = confusion_matrix(actualOutputList, expectedOutputList)
+    percision = float(tp) / (float(tp) + float(fp))
+    recall = float(tp) / (float(tp) + float(fn))
 
     open('toolBasedOutput.txt', 'w')
     with open('toolBasedOutput.txt', 'a') as outputFile:
@@ -287,6 +309,6 @@ def externalToolTraining(percision):
         outputFile.write("Recall\n")
         outputFile.write("--------------------------\n")
         outputFile.write("Scikit Learn: %.2f\n" % recall_score(testDesiredOutput, prediction, average='weighted'))
-        outputFile.write("My code: %.2f" % percision)
+        outputFile.write("My code: %.2f" % recall)
 
 main()
