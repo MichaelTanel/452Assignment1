@@ -6,8 +6,8 @@ from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Perceptron
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import recall_score
 from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
 from sklearn.metrics import confusion_matrix
 
 successCount = 0
@@ -111,7 +111,7 @@ def train():
         outputFile.write("\nInitial weight 2: ")
         outputFile.write(str(weights2))
         
-    iterations = 100
+    iterations = 2000
     trainThreshold = 25
 
     with open('output.txt', 'a') as outputFile:
@@ -258,23 +258,6 @@ def test(weights1, weights2):
 
     return (expectedOutputList, actualOutputList)
 
-def main():
-    (weights1, weights2) = train()
-    (expectedOutputList, actualOutputList) = test(weights1, weights2)
-    
-    percision = precision_score(expectedOutputList, actualOutputList, average='weighted')
-    recall = recall_score(expectedOutputList, actualOutputList, average='weighted')
-    
-    with open('output.txt', 'a') as outputFile:
-        outputFile.write("\nFinal weight 2: %s" % str(weights1))
-        outputFile.write("\nFinal weight 2: %s" % str(weights2))
-        outputFile.write("")
-        outputFile.write("Percision score: %.2f\n" % percision_score(expectedOutputList, actualOutputList, average='weighted'))
-        outputFile.write("Recall score: %.2f\n" % recall_score(expectedOutputList, actualOutputList, average='weighted'))
-        outputFile.write("\nConfusion matrix: \n%s" % confusion_matrix(actualOutputList, expectedOutputList))
-
-    externalToolTraining(percision, recall)
-
 # Training perceptron using Scikit
 def externalToolTraining(percision, recall):
     # Added skip rows due to the addition of headers in the csvs.
@@ -312,5 +295,21 @@ def externalToolTraining(percision, recall):
         outputFile.write("--------------------------\n")
         outputFile.write("Scikit Learn: %.2f\n" % recall_score(testDesiredOutput, prediction, average='weighted'))
         outputFile.write("My code: %.2f\n" % recall)
+
+def main():
+    (weights1, weights2) = train()
+    (expectedOutputList, actualOutputList) = test(weights1, weights2)
+    
+    percision = precision_score(expectedOutputList, actualOutputList, average='weighted')
+    recall = recall_score(expectedOutputList, actualOutputList, average='weighted')
+    
+    with open('output.txt', 'a') as outputFile:
+        outputFile.write("\nFinal weight 1: %s" % str(weights1))
+        outputFile.write("\nFinal weight 2: %s\n" % str(weights2))
+        outputFile.write("Percision score: %.2f\n" % percision)
+        outputFile.write("Recall score: %.2f\n" % recall)
+        outputFile.write("\nConfusion matrix: \n%s" % confusion_matrix(expectedOutputList, actualOutputList))
+
+    externalToolTraining(percision, recall)
 
 main()

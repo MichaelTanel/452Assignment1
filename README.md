@@ -13,3 +13,8 @@
 
 - The results for my neural network can be found in `output.txt`.
 - The results for the tool based results can be found in `toolBasedOutput.txt`.
+
+## Viewing Code
+
+- All of the code can be found in the file `main.py`.
+- To view the code used from Scikit Learn, go to the function `externalToolTraining()` in `main.py`.
