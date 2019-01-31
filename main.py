@@ -235,6 +235,8 @@ def test(weights1, weights2):
             expectedOutputList.append(2)
         elif output1 == 1 and output2 == 1:
             expectedOutputList.append(3)
+        else:
+            expectedOutputList.append(0)
         
         actualOutputList.append(int(values[-1]))
 
@@ -259,16 +261,22 @@ def test(weights1, weights2):
 def main():
     (weights1, weights2) = train()
     (expectedOutputList, actualOutputList) = test(weights1, weights2)
+    
+    percision = precision_score(expectedOutputList, actualOutputList, average='weighted')
+    recall = recall_score(expectedOutputList, actualOutputList, average='weighted')
+    
     with open('output.txt', 'a') as outputFile:
-        outputFile.write("\nFinal weight 1: ")
-        outputFile.write(str(weights1))
-        outputFile.write("\nFinal weight 2: ")
-        outputFile.write(str(weights2))
+        outputFile.write("\nFinal weight 2: %s" % str(weights1))
+        outputFile.write("\nFinal weight 2: %s" % str(weights2))
+        outputFile.write("")
+        outputFile.write("Percision score: %.2f\n" % percision_score(expectedOutputList, actualOutputList, average='weighted'))
+        outputFile.write("Recall score: %.2f\n" % recall_score(expectedOutputList, actualOutputList, average='weighted'))
+        outputFile.write("\nConfusion matrix: \n%s" % confusion_matrix(actualOutputList, expectedOutputList))
 
-    externalToolTraining(expectedOutputList, actualOutputList)
+    externalToolTraining(percision, recall)
 
 # Training perceptron using Scikit
-def externalToolTraining(expectedOutputList, actualOutputList):
+def externalToolTraining(percision, recall):
     # Added skip rows due to the addition of headers in the csvs.
     trainingData = np.loadtxt('trainSeeds.csv', delimiter=',', skiprows=1)
     testData = np.loadtxt('testSeeds.csv', delimiter=',', skiprows=1)
@@ -293,22 +301,16 @@ def externalToolTraining(expectedOutputList, actualOutputList):
 
     prediction = perceptron.predict(test)
 
-    # Calculating percision and recall of my code
-    (tn, fp, fn, tp) = confusion_matrix(actualOutputList, expectedOutputList)
-    percision = float(tp) / (float(tp) + float(fp))
-    recall = float(tp) / (float(tp) + float(fn))
-
     open('toolBasedOutput.txt', 'w')
     with open('toolBasedOutput.txt', 'a') as outputFile:
         outputFile.write("Percision\n")
         outputFile.write("--------------------------\n")
-
         outputFile.write("Scikit Learn: %.2f\n" % precision_score(testDesiredOutput, prediction, average='weighted'))
         outputFile.write("My code: %.2f\n" % percision)
         outputFile.write("--------------------------\n")
         outputFile.write("Recall\n")
         outputFile.write("--------------------------\n")
         outputFile.write("Scikit Learn: %.2f\n" % recall_score(testDesiredOutput, prediction, average='weighted'))
-        outputFile.write("My code: %.2f" % recall)
+        outputFile.write("My code: %.2f\n" % recall)
 
 main()

@@ -9,3 +9,7 @@
 5. Run `pip install -U scikit-learn`
 5. Run code using `python main.py`
 
+## Viewing Results
+
+- The results for my neural network can be found in `output.txt`.
+- The results for the tool based results can be found in `toolBasedOutput.txt`.
