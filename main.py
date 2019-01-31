@@ -1,12 +1,13 @@
 import csv
 import pandas as pd
+import numpy as np
 from random import uniform
 from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Perceptron
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
-import numpy as np
+from sklearn.metrics import recall_score
+from sklearn.metrics import precision_score
 
 successCount = 0
 totalCount = 0
@@ -109,7 +110,7 @@ def train():
         outputFile.write("\nInitial weight 2: ")
         outputFile.write(str(weights2))
         
-    iterations = 3000
+    iterations = 100
     trainThreshold = 25
 
     with open('output.txt', 'a') as outputFile:
@@ -233,22 +234,25 @@ def test(weights1, weights2):
     print("============================")
 
     print("Success Count: ", successTestCount)
-    print("Total Count: ", totalCount)    
-    print("Success Rate: ", float(successTestCount) / float(totalCount))
+    print("Total Count: ", totalCount)
+    successRate = float(successTestCount) / float(totalCount)
+    print("Success Rate: %.2f", successRate)
+
+    return successRate
 
 def main():
     (weights1, weights2) = train()
-    test(weights1, weights2)
+    percisionValue = test(weights1, weights2)
     with open('output.txt', 'a') as outputFile:
         outputFile.write("\nFinal weight 1: ")
         outputFile.write(str(weights1))
         outputFile.write("\nFinal weight 2: ")
         outputFile.write(str(weights2))
 
-    externalToolTraining()
+    externalToolTraining(percisionValue)
 
 # Training perceptron using Scikit
-def externalToolTraining():
+def externalToolTraining(percision):
     trainingData = np.loadtxt('trainSeeds.csv', delimiter=',', skiprows=1)
     testData = np.loadtxt('testSeeds.csv', delimiter=',', skiprows=1)
 
@@ -262,7 +266,7 @@ def externalToolTraining():
     # Removing all columns except last column
     testDesiredOutput = testData[:, -1]
 
-    ss = StandardScaler
+    ss = StandardScaler()
     ss.fit(trainingInputData)
 
     train = ss.transform(trainingInputData)
@@ -272,6 +276,17 @@ def externalToolTraining():
 
     prediction = perceptron.predict(test)
 
-    print('Accuracy: %.2f' % accuracy_score(testDesiredOutput, prediction))
+    open('toolBasedOutput.txt', 'w')
+    with open('toolBasedOutput.txt', 'a') as outputFile:
+        outputFile.write("Percision\n")
+        outputFile.write("--------------------------\n")
+
+        outputFile.write("Scikit Learn: %.2f\n" % precision_score(testDesiredOutput, prediction, average='weighted'))
+        outputFile.write("My code: %.2f\n" % percision)
+        outputFile.write("--------------------------\n")
+        outputFile.write("Recall\n")
+        outputFile.write("--------------------------\n")
+        outputFile.write("Scikit Learn: %.2f\n" % recall_score(testDesiredOutput, prediction, average='weighted'))
+        outputFile.write("My code: %.2f" % percision)
 
 main()
