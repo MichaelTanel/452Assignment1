@@ -1,7 +1,6 @@
 import csv
 import pandas as pd
 from random import uniform
-
 from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Perceptron
@@ -250,13 +249,29 @@ def main():
 
 # Training perceptron using Scikit
 def externalToolTraining():
-    trainingData = np.loadtxt('trainSeeds.csv', delimiter=',') # load csv file into numpy array
-    testData = np.loadtxt('testSeeds.csv', delimiter=',')
+    trainingData = np.loadtxt('trainSeeds.csv', delimiter=',', skiprows=1)
+    testData = np.loadtxt('testSeeds.csv', delimiter=',', skiprows=1)
 
+    # Removing last column
     trainingInputData = trainingData[:, :-1]
+    # Removing all columns except last column
     trainingDesiredOutput = trainingData[:, -1]
 
+    # Removing last column
     testInputData = testData[:, :-1]
+    # Removing all columns except last column
     testDesiredOutput = testData[:, -1]
+
+    ss = StandardScaler
+    ss.fit(trainingInputData)
+
+    train = ss.transform(trainingInputData)
+    test = ss.transform(testInputData)
+    perceptron = Perceptron(n_iter=40, eta0=0.1, random_state=0)
+    perceptron.fit(train, trainingDesiredOutput)
+
+    prediction = perceptron.predict(test)
+
+    print('Accuracy: %.2f' % accuracy_score(testDesiredOutput, prediction))
 
 main()

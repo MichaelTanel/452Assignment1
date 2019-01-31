@@ -6,4 +6,6 @@
 2. Install pip
 3. Run `pip install wheel`
 4. Run `pip install pandas`
+5. Run `pip install -U scikit-learn`
 5. Run code using `python main.py`
+
