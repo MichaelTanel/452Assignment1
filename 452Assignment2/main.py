@@ -15,23 +15,31 @@ totalCount = 0
 
 # Object to store the max values from each column
 class MaxValues(object):
-    area = 0
-    perimeter = 0
-    compactness = 0
-    length = 0
-    width = 0
-    asymmetryCoefficient = 0
-    lengthGroove = 0
-
+    ID = 0
+    refractiveIndex = 0
+    sodium = 0
+    magnesium = 0
+    aluminium = 0
+    silicon = 0
+    potassium = 0
+    calcium = 0
+    barium = 0
+    iron = 0
+    glassType = 0
+    
 # Normalizes the data by dividing each data point in each column by the columns max value
 def normalizeData(maxVals, df):
-    df['Area']                  = df['Area'] / maxVals.area
-    df['Perimeter']             = df['Perimeter'] / maxVals.perimeter
-    df['Compactness']           = df['Compactness'] / maxVals.compactness
-    df['Length']                = df['Length'] / maxVals.length
-    df['Width']                 = df['Width'] / maxVals.width
-    df['AsymmetryCoefficient']  = df['AsymmetryCoefficient'] / maxVals.asymmetryCoefficient
-    df['LengthGroove']          = df['LengthGroove'] / maxVals.lengthGroove
+    df['ID']                = df['ID'] / maxVals.ID
+    df['Refractive_Index']  = df['Refractive_Index'] / maxVals.refractiveIndex
+    df['Sodium']            = df['Sodium'] / maxVals.sodium
+    df['Magnesium']         = df['Magnesium'] / maxVals.magnesium
+    df['Aluminium']         = df['Aluminium'] / maxVals.aluminium
+    df['Silicon']           = df['Silicon'] / maxVals.silicon
+    df['Potassium']         = df['Potassium'] / maxVals.potassium
+    df['Calcium']           = df['Calcium'] / maxVals.calcium
+    df['Barium']            = df['Barium'] / maxVals.barium
+    df['Iron']              = df['Iron'] / maxVals.iron
+    df['Glass_Type']        = df['Glass_Type'] / maxVals.glassType
     return df
 
 # Used column headers to easily import the data in columns for more efficient normalizing
