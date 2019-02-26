@@ -2,20 +2,18 @@ import csv
 import pandas as pd
 import numpy as np
 from random import uniform
-from sklearn import datasets
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import Perceptron
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import precision_score
-from sklearn.metrics import recall_score
-from sklearn.metrics import confusion_matrix
+from random import randint
+
+numInputNodes = 9
+numOutputNodes = 6  # 6 types of glass
+numHiddenLayers = 1
+numHiddenNodes = 0
 
 successCount = 0
 totalCount = 0
 
 # Object to store the max values from each column
 class MaxValues(object):
-    ID = 0
     refractiveIndex = 0
     sodium = 0
     magnesium = 0
@@ -25,11 +23,9 @@ class MaxValues(object):
     calcium = 0
     barium = 0
     iron = 0
-    glassType = 0
     
 # Normalizes the data by dividing each data point in each column by the columns max value
 def normalizeData(maxVals, df):
-    df['ID']                = df['ID'] / maxVals.ID
     df['Refractive_Index']  = df['Refractive_Index'] / maxVals.refractiveIndex
     df['Sodium']            = df['Sodium'] / maxVals.sodium
     df['Magnesium']         = df['Magnesium'] / maxVals.magnesium
@@ -39,14 +35,14 @@ def normalizeData(maxVals, df):
     df['Calcium']           = df['Calcium'] / maxVals.calcium
     df['Barium']            = df['Barium'] / maxVals.barium
     df['Iron']              = df['Iron'] / maxVals.iron
-    df['Glass_Type']        = df['Glass_Type'] / maxVals.glassType
+
     return df
 
 # Used column headers to easily import the data in columns for more efficient normalizing
 def importCSV(filename):
     df = pd.read_csv(filename)
+
     maxVals = MaxValues()
-    maxVals.ID              = max(df['ID'])
     maxVals.refractiveIndex = max(df['Refractive_Index'])
     maxVals.sodium          = max(df['Sodium'])
     maxVals.magnesium       = max(df['Magnesium'])
@@ -56,13 +52,13 @@ def importCSV(filename):
     maxVals.calcium         = max(df['Calcium'])
     maxVals.barium          = max(df['Barium'])
     maxVals.iron            = max(df['Iron'])
-    maxVals.glassType       = max(df['Glass_Type'])
 
     return normalizeData(maxVals, df)
 
 # Calculates the activation value for the neuron
 def calculateActivationValue(values, weights):
     # Bias weight * bias value (1)
+    # Loop over each row of weights (1 row is 1 node)
     activationValue = weights[0]
 
     for i in range(len(values)):
@@ -87,41 +83,75 @@ def calculateNewWeights(output, weights, values, expectedOutput):
 # Retrieves data from row
 def parseRow(row):
     values = []
-    values.append(float(row[1][1]))
+    # values.append(float(row[1][1]))
+    # Skip row[1][1] since it's the ID
     values.append(float(row[1][2]))
     values.append(float(row[1][3]))
     values.append(float(row[1][4]))
     values.append(float(row[1][5]))
     values.append(float(row[1][6]))
     values.append(float(row[1][7]))
-
+    values.append(float(row[1][8]))
+    values.append(float(row[1][9]))
+    values.append(int(row[1][10]))
     return values
 
 # Calculates the output value for each neuron
 def calculateOutput(activation):
     return 1 if activation > 0 else 0
 
+def calcOutput(weights, values):
+    # Initialize an empty list, the same size as the number of hidden nodes
+    output = [0 for x in range(len(weights))]
+
+    i, j = 0, 0
+    print(len(weights))
+    print(len(weights[i]))
+    print(len(values))
+    print("----------------")
+
+    for i in range(len(weights)):
+        sum = 0
+        for j in range(len(weights[i])):
+            sum += weights[i][j] * values[j]
+        output[i] = sum
+
+    print(output)
+    return output
+
+# Split data 70, 15, 15
 def train():
-    df = importCSV('trainSeeds.csv')
+    df = importCSV('GlassData.csv')
 
     global totalCount
     global successCount
+    global numInputNodes
+    global numOutputNodes
+    global numHiddenLayers
+    global numHiddenNodes
 
-    weights1 = []
-    weights2 = []
-    values = []
+    numHiddenNodes = randint(numOutputNodes, numInputNodes)
 
+    # Creates two 2D arrays with floating point numbers between -1 and 1.
+    # The first is for the weights between the input nodes and the hidden nodes
+    # The second is for the weights between the hidden nodes and the output nodes
+    numHiddenNodes = 7
+    inputHiddenWeights = [[uniform(-1, 1) for x in range(numInputNodes)] for y in range(numHiddenNodes)]
+    hiddenOutputWeights = [[uniform(-1, 1) for x in range(numHiddenNodes)] for y in range(numOutputNodes)]
+    # print(inputHiddenWeights)
     weights1 = [uniform(-1, 1) for _ in range(8)]
     weights2 = [uniform(-1, 1) for _ in range(8)]
+    # Initializes array full of zeros. This will store the values of the hidden nodes
+    values = [0 for x in range(numHiddenNodes)]
     
     # Wipes the existing file first
     open('output.txt', 'w')
     # Appends to new file
     with open('output.txt', 'a') as outputFile:
-        outputFile.write("Initial weight 1: ")
-        outputFile.write(str(weights1))
-        outputFile.write("\nInitial weight 2: ")
-        outputFile.write(str(weights2))
+        outputFile.write("Initial weights input -> hidden: ")
+        outputFile.write(str(inputHiddenWeights))
+        outputFile.write("\nInitial weights hidden -> output: ")
+        outputFile.write(str(hiddenOutputWeights))
         
     iterations = 2000
     trainThreshold = 25
@@ -158,6 +188,20 @@ def train():
         # Iterate over dataframe row
         for row in df.iterrows():
             values = parseRow(row)
+
+            # Compute activation
+            # Compute output from hidden node
+            # Compute activation at output nodes
+            # Compute output
+            # Modify weights between hidden and output
+            # Modify weights between input and hidden
+
+            # For each node in hidden layer
+                # For each weight in input layer
+            hiddenResult = calcOutput(inputHiddenWeights, values)
+            outputResult = calcOutput(hiddenOutputWeights, hiddenResult)
+
+            # outputHiddenLayer = 
             activation1 = calculateActivationValue(values, weights1)
             activation2 = calculateActivationValue(values, weights2)
 
@@ -209,6 +253,18 @@ def train():
     return (weights1, weights2)
 
 def test(weights1, weights2):
+
+    # TODO: output initial weights, node output function used
+    # learning rate, termination criteria & proper explanations for the choice
+
+    # Output types:
+    # 1 = building_windows_float_processed
+    # 2 = building_windows_non_float_processed
+    # 3 = vehicle_windows_float_processed
+    # 5 = containers
+    # 6 = tableware
+    # 7 = headlamp
+
     df = importCSV('testSeeds.csv')
 
     successTestCount = 0
@@ -310,18 +366,18 @@ def externalToolTraining(percision, recall):
 
 def main():
     (weights1, weights2) = train()
-    (expectedOutputList, actualOutputList) = test(weights1, weights2)
+    # (expectedOutputList, actualOutputList) = test(weights1, weights2)
     
-    percision = precision_score(expectedOutputList, actualOutputList, average='weighted')
-    recall = recall_score(expectedOutputList, actualOutputList, average='weighted')
-    
-    with open('output.txt', 'a') as outputFile:
-        outputFile.write("\nFinal weight 1: %s" % str(weights1))
-        outputFile.write("\nFinal weight 2: %s\n" % str(weights2))
-        outputFile.write("Percision score: %.2f\n" % percision)
-        outputFile.write("Recall score: %.2f\n" % recall)
-        outputFile.write("\nConfusion matrix: \n%s" % confusion_matrix(expectedOutputList, actualOutputList))
-
-    externalToolTraining(percision, recall)
+    # percision = precision_score(expectedOutputList, actualOutputList, average='weighted')
+    # recall = recall_score(expectedOutputList, actualOutputList, average='weighted')
+    # 
+    # with open('output.txt', 'a') as outputFile:
+        # outputFile.write("\nFinal weight 1: %s" % str(weights1))
+        # outputFile.write("\nFinal weight 2: %s\n" % str(weights2))
+        # outputFile.write("Percision score: %.2f\n" % percision)
+        # outputFile.write("Recall score: %.2f\n" % recall)
+        # outputFile.write("\nConfusion matrix: \n%s" % confusion_matrix(expectedOutputList, actualOutputList))
+# 
+    # externalToolTraining(percision, recall)
 
 main()
