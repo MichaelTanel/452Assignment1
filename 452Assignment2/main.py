@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from random import uniform
 from random import randint
+import math
 
 numInputNodes = 9
 numOutputNodes = 6  # 6 types of glass
@@ -11,6 +12,22 @@ numHiddenNodes = 0
 
 successCount = 0
 totalCount = 0
+
+# Retrieves data from row
+def parseRow(row):
+    values = []
+    # values.append(float(row[1][1]))
+    # Skip row[1][1] since it's the ID
+    values.append(float(row[1][2]))
+    values.append(float(row[1][3]))
+    values.append(float(row[1][4]))
+    values.append(float(row[1][5]))
+    values.append(float(row[1][6]))
+    values.append(float(row[1][7]))
+    values.append(float(row[1][8]))
+    values.append(float(row[1][9]))
+    values.append(int(row[1][10]))
+    return values
 
 # Object to store the max values from each column
 class MaxValues(object):
@@ -55,17 +72,6 @@ def importCSV(filename):
 
     return normalizeData(maxVals, df)
 
-# Calculates the activation value for the neuron
-def calculateActivationValue(values, weights):
-    # Bias weight * bias value (1)
-    # Loop over each row of weights (1 row is 1 node)
-    activationValue = weights[0]
-
-    for i in range(len(values)):
-        activationValue += values[i] * weights[i + 1]
-
-    return activationValue
-
 # Calculating the new weights using the error correction learning technique
 def calculateNewWeights(output, weights, values, expectedOutput):
     learningRate = 0.1
@@ -80,46 +86,49 @@ def calculateNewWeights(output, weights, values, expectedOutput):
 
     return weights
 
-# Retrieves data from row
-def parseRow(row):
-    values = []
-    # values.append(float(row[1][1]))
-    # Skip row[1][1] since it's the ID
-    values.append(float(row[1][2]))
-    values.append(float(row[1][3]))
-    values.append(float(row[1][4]))
-    values.append(float(row[1][5]))
-    values.append(float(row[1][6]))
-    values.append(float(row[1][7]))
-    values.append(float(row[1][8]))
-    values.append(float(row[1][9]))
-    values.append(int(row[1][10]))
-    return values
-
-# Calculates the output value for each neuron
-def calculateOutput(activation):
-    return 1 if activation > 0 else 0
-
 def calcOutput(weights, values):
     # Initialize an empty list, the same size as the number of hidden nodes
     output = [0 for x in range(len(weights))]
-
-    i, j = 0, 0
-    print(len(weights))
-    print(len(weights[i]))
-    print(len(values))
-    print("----------------")
 
     for i in range(len(weights)):
         sum = 0
         for j in range(len(weights[i])):
             sum += weights[i][j] * values[j]
-        output[i] = sum
+        # Sigma function
+        output[i] = 1 / (1 + math.exp(-sum))
 
-    print(output)
     return output
 
-# Split data 70, 15, 15
+def evaluateGlassType(value, d):
+
+    if value == 0:
+        return d['1']
+    elif value == 1:
+        return d['2']
+    elif value == 2:
+        return d['3']
+    elif value == 3:
+        return d['5']
+    elif value == 4:
+        return d['6']
+    else:
+        return d['7']
+
+def calcDeltaJ(d, y):
+    return (d - y) * y * (1 - y)
+
+# y and d are actual and expected values, respectively
+def calcOutputWeights(hiddenValues, outputValues, y, d):
+    num = 0
+    # print("HV: ", hiddenValues)
+    # print("OV: ", outputValues)
+    # for i in range(len(hiddenValues)):
+
+
+def calcHiddenWeights():
+    num = 1
+
+# Split data 70%, 15%, 15%
 def train():
     df = importCSV('GlassData.csv')
 
@@ -130,7 +139,7 @@ def train():
     global numHiddenLayers
     global numHiddenNodes
 
-    numHiddenNodes = randint(numOutputNodes, numInputNodes)
+    # numHiddenNodes = randint(numOutputNodes, numInputNodes)
 
     # Creates two 2D arrays with floating point numbers between -1 and 1.
     # The first is for the weights between the input nodes and the hidden nodes
@@ -138,11 +147,12 @@ def train():
     numHiddenNodes = 7
     inputHiddenWeights = [[uniform(-1, 1) for x in range(numInputNodes)] for y in range(numHiddenNodes)]
     hiddenOutputWeights = [[uniform(-1, 1) for x in range(numHiddenNodes)] for y in range(numOutputNodes)]
-    # print(inputHiddenWeights)
+
     weights1 = [uniform(-1, 1) for _ in range(8)]
     weights2 = [uniform(-1, 1) for _ in range(8)]
-    # Initializes array full of zeros. This will store the values of the hidden nodes
-    values = [0 for x in range(numHiddenNodes)]
+
+    # Stores each row of the csv
+    values = []
     
     # Wipes the existing file first
     open('output.txt', 'w')
@@ -176,94 +186,47 @@ def train():
                 print("Trained:", trained)
                 break
 
-        errorCount = 0
         totalCount = 0
         successCount = 0
         successRate = 0
-
-        # Lists to store activation value, output, and expected output 
-        errorNeuron1 = []
-        errorNeuron2 = []
         
         # Iterate over dataframe row
         for row in df.iterrows():
-            values = parseRow(row)
+            inputValues = parseRow(row)
 
-            # Compute activation
-            # Compute output from hidden node
-            # Compute activation at output nodes
-            # Compute output
-            # Modify weights between hidden and output
-            # Modify weights between input and hidden
+            # Calculate the outputs at both the hidden layer, and the output layer
+            hiddenValues = calcOutput(inputHiddenWeights, inputValues)
+            outputValues = calcOutput(hiddenOutputWeights, hiddenValues)
 
-            # For each node in hidden layer
-                # For each weight in input layer
-            hiddenResult = calcOutput(inputHiddenWeights, values)
-            outputResult = calcOutput(hiddenOutputWeights, hiddenResult)
+            d = {'1': "100000"}
+            d['2'] = "010000"
+            d['3'] = "001000"
+            d['5'] = "000100"
+            d['6'] = "000010"
+            d['7'] = "000001"
 
-            # outputHiddenLayer = 
-            activation1 = calculateActivationValue(values, weights1)
-            activation2 = calculateActivationValue(values, weights2)
+            # The first parameter passed in is the index of the output nodes array with the max value
+            actualGlassType = evaluateGlassType(outputValues.index(max(outputValues)), d)
+            expectedGlassType = d[str(inputValues[-1])]
 
-            output1 = calculateOutput(activation1)
-            output2 = calculateOutput(activation2)
-
-            # values[-1] contains the expected result
-            expectedOutputBinary = format(int(values[-1]), '02b')
- 
             # If the expectedOutput first bit is equal to the output of the first node
-            if int(expectedOutputBinary[0]) != output1:
-                weights1copy = weights1
-                valuesCopy = values                
-                errorNeuron1.append((activation1, output1, weights1copy, valuesCopy, int(expectedOutputBinary[0])))
-
-            # If the expectedOutput second bit is equal to the output of the second node
-            if int(expectedOutputBinary[1]) != output2:
-                weights2copy = weights2
-                valuesCopy = values
-                errorNeuron2.append((activation2, output2, weights2copy, valuesCopy, int(expectedOutputBinary[1])))
-
-            # If either of the outputs match their corresponding bit in the expected output,
-            # increase the success count.
-            if int(expectedOutputBinary[0]) == output1 and int(expectedOutputBinary[1]) == output2:
+            if actualGlassType  == expectedGlassType:
                 successCount += 1
 
             totalCount += 1
 
-        # print(successCount)
-        # print(totalCount - successCount)
-        # print(totalCount)
+            calcOutputWeights(hiddenValues, actualGlassType, expectedGlassType)
+            calcHiddenWeights()
+
         successRate = float(successCount) / float(totalCount)
         print("Success rate: ", successRate)
 
-        # List not empty
-        if len(errorNeuron1) != 0:
-            # Sorts to get the closest possible value to 0 as the first element, then use that to adjust the weights            
-            errorNeuron1.sort(key=lambda tup: abs(tup[0]))  # sorts in place
-            weights1 = calculateNewWeights(errorNeuron1[0][1], errorNeuron1[0][2], errorNeuron1[0][3], errorNeuron1[0][4])
-
-        # List not empty
-        if len(errorNeuron2) != 0:
-            # Sorts to get the closest possible value to 0 as the first element, then use that to adjust the weights
-            errorNeuron2.sort(key=lambda tup: abs(tup[0]))  # sorts in place
-            weights2 = calculateNewWeights(errorNeuron2[0][1], errorNeuron2[0][2], errorNeuron2[0][3], errorNeuron2[0][4])
-
-        print("--------------------------------------------")
-
-    return (weights1, weights2)
+    return (inputHiddenWeights, hiddenOutputWeights)
 
 def test(weights1, weights2):
 
     # TODO: output initial weights, node output function used
     # learning rate, termination criteria & proper explanations for the choice
-
-    # Output types:
-    # 1 = building_windows_float_processed
-    # 2 = building_windows_non_float_processed
-    # 3 = vehicle_windows_float_processed
-    # 5 = containers
-    # 6 = tableware
-    # 7 = headlamp
 
     df = importCSV('testSeeds.csv')
 
@@ -365,7 +328,7 @@ def externalToolTraining(percision, recall):
         outputFile.write("My code: %.2f\n" % recall)
 
 def main():
-    (weights1, weights2) = train()
+    inputHiddenWeights, hiddenOutputWeights = train()
     # (expectedOutputList, actualOutputList) = test(weights1, weights2)
     
     # percision = precision_score(expectedOutputList, actualOutputList, average='weighted')
