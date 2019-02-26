@@ -114,16 +114,26 @@ def evaluateGlassType(value, d):
     else:
         return d['7']
 
+# Caclulation for deltaJ
 def calcDeltaJ(d, y):
-    return (d - y) * y * (1 - y)
+    output = [0 for x in range(len(y))]
+    for i in range(len(y)):
+        output[i] = (int(d[i]) - int(y[i])) * int(y[i]) * (1 - int(y[i]))
 
-# y and d are actual and expected values, respectively
-def calcOutputWeights(hiddenValues, outputValues, y, d):
-    num = 0
-    # print("HV: ", hiddenValues)
-    # print("OV: ", outputValues)
-    # for i in range(len(hiddenValues)):
+    return output
 
+# y and d are actual and expected values arrays respectively
+def calcOutputWeights(hiddenValues, hiddenOutputWeights, d, y, deltaJOutput):
+    
+    learningRate = 0.05
+    newWeights = hiddenOutputWeights.copy()
+
+    # hiddenOutputWeights and deltaJOutput are the same length lists always
+    for i in range(len(hiddenOutputWeights)):
+        for j in range(len(hiddenOutputWeights[i])):
+            newWeights[i][j] = learningRate * hiddenValues[i] * deltaJOutput[i]
+
+    return newWeights
 
 def calcHiddenWeights():
     num = 1
@@ -215,7 +225,8 @@ def train():
 
             totalCount += 1
 
-            calcOutputWeights(hiddenValues, actualGlassType, expectedGlassType)
+            deltaJOutput = calcDeltaJ(expectedGlassType, actualGlassType)
+            hiddenOutputWeights = calcOutputWeights(hiddenValues, hiddenOutputWeights, expectedGlassType, actualGlassType, deltaJOutput)
             calcHiddenWeights()
 
         successRate = float(successCount) / float(totalCount)
