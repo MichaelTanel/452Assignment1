@@ -5,6 +5,9 @@ from random import uniform
 from random import randint
 import math
 from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import confusion_matrix
 
 numInputNodes = 9
 numOutputNodes = 6  # 6 types of glass
@@ -120,6 +123,7 @@ def calcDeltaJ(d, y):
     output = [0 for x in range(len(y))]
     for i in range(len(y)):
         output[i] = (d[i] - y[i]) * y[i] * (1 - y[i])
+
     return output
 
 def calcOutputWeights(hiddenValues, hiddenOutputWeights, deltaJOutput):
@@ -153,7 +157,16 @@ def calcHiddenWeights(inputValues, inputHiddenWeights, hiddenOutputWeights, delt
 
     return newWeights
 
+# Split data 70%, 15%, 15%
 def splitData(x, y):
+
+    with open('output.txt', 'a') as outputFile:
+        str = "\nPercentage of data for training, validation, testing: 70%%, 15%%, 15%%. These numbers were gathered from the notes."
+        str += "\nUsing StratifiedShuffleSplit from SciKitLearn, it splits the data and keeps the percentages of the output results the same over the training, validation and testing data."
+        str += "\nSo, if 20%% of the output results are a 6, in each of the training, validation, and testing data after the split, 20%% of the output results will be a 6"
+        outputFile.write(str)
+        
+    # Using test_size 0.3 to split the 70% for training and 30% for both validation and test data    
     sss = StratifiedShuffleSplit(n_splits=5, test_size=0.3, random_state=0)
     xTrainData = []
     yTrainData = []
@@ -164,24 +177,23 @@ def splitData(x, y):
     xTestData = []
     yTestData = []
     
+    # Split into testing and temp data
     for train_index, temp_index in sss.split(x, y):
         xTrainData, xTempData = x[train_index], x[temp_index]
         yTrainData, yTempData = y[train_index], y[temp_index]
         
+    # Using test_size 0.5 to split evenly between the 30% for validation and test data to get 15% of the dataset each
     sss = StratifiedShuffleSplit(n_splits=5, test_size=0.5, random_state=0)
 
+    # Split into validation and testing data
     for validation_index, test_index in sss.split(x[temp_index], y[temp_index]):
         xValidationData, xTestData = x[validation_index], x[test_index]
         yValidationData, yTestData = y[validation_index], y[test_index]
-        
+    
     return (xTrainData, yTrainData, xValidationData, yValidationData, xTestData, yTestData)
 
-# Split data 70%, 15%, 15%
+def train(dfTrain, dfValidate):
 
-def train(df):
-
-    global totalCount
-    global successCount
     global numInputNodes
     global numOutputNodes
     global numHiddenLayers
@@ -209,7 +221,7 @@ def train(df):
         outputFile.write("\nInitial weights hidden -> output: ")
         outputFile.write(str(hiddenOutputWeights))
         
-    iterations = 1000
+    iterations = 200
     trainThreshold = 25
 
     with open('output.txt', 'a') as outputFile:
@@ -252,7 +264,7 @@ def train(df):
         d['7'] = [0,0,0,0,0,1]
 
         # Iterate over dataframe row
-        for row in df.iterrows():
+        for row in dfTrain.iterrows():
             inputValues = parseRow(row)
 
             # Calculate the outputs at both the hidden layer, and the output layer
@@ -264,124 +276,109 @@ def train(df):
             actualGlassType = evaluateGlassType(outputValues.index(max(outputValues)), d)
             expectedGlassType = d[str(inputValues[-1])]
 
-            # If the expectedOutput first bit is equal to the output of the first node
-            if actualGlassType == expectedGlassType:
-                successCount += 1
-
-            totalCount += 1
 
             deltaJOutput = calcDeltaJ(expectedGlassType, outputValues)
             hiddenOutputWeights = calcOutputWeights(hiddenValues, hiddenOutputWeights, deltaJOutput)
             inputHiddenWeights = calcHiddenWeights(inputValues, inputHiddenWeights, hiddenOutputWeights, deltaJOutput, hiddenValues)
 
-        successRate = float(successCount) / float(totalCount)
-        print("Success rate: ", successRate)
+            if actualGlassType == expectedGlassType:
+                successCount += 1
 
+            totalCount += 1
+
+        successRate = float(successCount) / float(totalCount)
+
+        # Validation
+        mse = 0
+        mseThreshold = 1
+        
+        
+        # p: number of data points. 6 because there's 6 output nodes
+        p = 6 * len(dfValidate.index)
+
+        for row in dfValidate.iterrows():
+            inputValues = parseRow(row)
+
+            # Calculate the outputs at both the hidden layer, and the output layer
+            hiddenValues = calcOutput(inputHiddenWeights, inputValues)
+            outputValues = calcOutput(hiddenOutputWeights, hiddenValues)
+
+            # The first parameter passed in is the index of the output nodes array with the max value
+            # Represented as an array of zeros with one 1. If the 1 is in the third element, the output is 3
+            actualGlassType = evaluateGlassType(outputValues.index(max(outputValues)), d)
+            expectedGlassType = d[str(inputValues[-1])]
+
+            val = np.sum(np.square(np.subtract(expectedGlassType, actualGlassType)))
+            mse += float(1 / float(p)) * val
+            
+            if mse >= mseThreshold:
+                return (inputHiddenWeights, hiddenOutputWeights)
+            
     return (inputHiddenWeights, hiddenOutputWeights)
 
-def test(weights1, weights2):
-
-    # TODO: output initial weights, node output function used
-    # learning rate, termination criteria & proper explanations for the choice
-
-    df = importCSV('testSeeds.csv')
-
-    successTestCount = 0
-    totalCount = 0
+def test(inputHiddenWeights, hiddenOutputWeights, dfTest):
+    glassTypesDict = {'1': "building_windows_float_processed"}
+    glassTypesDict['2'] = "building_windows_non_float_processed"
+    glassTypesDict['3'] = "vehicle_windows_float_processed"
+    glassTypesDict['5'] = "containers"
+    glassTypesDict['6'] = "tableware"
+    glassTypesDict['7'] = "headlamps"
 
     with open('output.txt', 'a') as outputFile:
-        outputFile.write("\n\nOriginal\tPredicted\n")
+        outputFile.write("\n\nOriginal\t\t\t\t\t\t\t\tPredicted\n")
 
     # Lists to hold the expected and actual output.
     # Used when calculating percision and recall.
     expectedOutputList = []
     actualOutputList = []
 
-    # Iterate over dataframe row
-    for row in df.iterrows():
+    totalCount = 0
+    successCount = 0
 
-        values = parseRow(row)
-        activation1 = calculateActivationValue(values, weights1)
-        activation2 = calculateActivationValue(values, weights2)
+    for row in dfTest.iterrows():
+        inputValues = parseRow(row)
 
-        output1 = calculateOutput(activation1)
-        output2 = calculateOutput(activation2)
+        # Calculate the outputs at both the hidden layer, and the output layer
+        hiddenValues = calcOutput(inputHiddenWeights, inputValues)
+        outputValues = calcOutput(hiddenOutputWeights, hiddenValues)
 
-        # values[-1] contains the expected result
-        expectedOutputBinary = format(int(values[-1]), '02b')
+        actualGlassType = str(outputValues.index(max(outputValues)) + 1)
+        if actualGlassType == '4':
+            actualGlassType = '5'
+        elif actualGlassType == '5':
+            actualGlassType = '6'
+        elif actualGlassType == '6':
+            actualGlassType = '7'
 
-        # If either of the outputs did not match their corresponding bit in the expected output,
-        # increase the error.
-        if int(expectedOutputBinary[0]) == output1 and int(expectedOutputBinary[1]) == output2:
-            successTestCount += 1
+        expectedGlassType = str(inputValues[-1])
 
-        # Convert 2 outputs to decimal value
-        if output1 == 0 and output2 == 1:
-            expectedOutputList.append(1)
-        elif output1 == 1 and output2 == 0:
-            expectedOutputList.append(2)
-        elif output1 == 1 and output2 == 1:
-            expectedOutputList.append(3)
-        else:
-            expectedOutputList.append(0)
-        
-        actualOutputList.append(int(values[-1]))
+        actualOutputList.append(int(actualGlassType))
+        expectedOutputList.append(int(expectedGlassType))
 
         with open('output.txt', 'a') as outputFile:
-            output = output1 + output2
-            outputFile.write("%d" % int(values[-1]))
-            outputFile.write("\t\t\t%s\n" % output)
+            outputFile.write("%s" % glassTypesDict[actualGlassType])
+            outputFile.write("\t\t\t%s\n" % glassTypesDict[expectedGlassType])
 
         totalCount += 1
+
+        # If the expectedOutput first bit is equal to the output of the first node
+        if actualGlassType == expectedGlassType:
+            successCount += 1
+
+        successRate = float(successCount) / float(totalCount)
+        # print("Success rate: ", successRate)
+
     
     print("============================")
     print("Testing")
     print("============================")
 
-    print("Success Count: ", successTestCount)
+    print("Success Count: ", successCount)
     print("Total Count: ", totalCount)
-    successRate = float(successTestCount) / float(totalCount)
-    print("Success Rate: %.2f", successRate)
+    successRate = float(successCount) / float(totalCount)
+    print("Success Rate: %.2f" % successRate)
 
     return (expectedOutputList, actualOutputList)
-
-# Training perceptron using Scikit
-def externalToolTraining(percision, recall):
-    # Added skip rows due to the addition of headers in the csvs.
-    trainingData = np.loadtxt('trainSeeds.csv', delimiter=',', skiprows=1)
-    testData = np.loadtxt('testSeeds.csv', delimiter=',', skiprows=1)
-
-    # Removing last column
-    trainingInputData = trainingData[:, :-1]
-    # Removing all columns except last column
-    trainingDesiredOutput = trainingData[:, -1]
-
-    # Removing last column
-    testInputData = testData[:, :-1]
-    # Removing all columns except last column
-    testDesiredOutput = testData[:, -1]
-
-    # Using scikit learn
-    ss = StandardScaler()
-    ss.fit(trainingInputData)
-    train = ss.transform(trainingInputData)
-    test = ss.transform(testInputData)
-    perceptron = Perceptron(n_iter=40, eta0=0.1, random_state=0)
-    perceptron.fit(train, trainingDesiredOutput)
-
-    prediction = perceptron.predict(test)
-
-    open('toolBasedOutput.txt', 'w')
-    with open('toolBasedOutput.txt', 'a') as outputFile:
-        outputFile.write("Percision\n")
-        outputFile.write("--------------------------\n")
-        outputFile.write("Scikit Learn: %.2f\n" % precision_score(testDesiredOutput, prediction, average='weighted'))
-        outputFile.write("My code: %.2f\n" % percision)
-        outputFile.write("--------------------------\n")
-        outputFile.write("Recall\n")
-        outputFile.write("--------------------------\n")
-        outputFile.write("Scikit Learn: %.2f\n" % recall_score(testDesiredOutput, prediction, average='weighted'))
-        outputFile.write("My code: %.2f\n" % recall)
 
 def main():
     df = importCSV('GlassData.csv')
@@ -391,23 +388,24 @@ def main():
     data = df.values
     xTrainData, yTrainData, xValidationData, yValidationData, xTestData, yTestData = splitData(data, outputData)
 
-    print(xTrainData)
-    inputHiddenWeights, hiddenOutputWeights = train(xTrainData)
+    dfTrain = pd.DataFrame(xTrainData, columns=['Refractive_Index', 'Sodium', 'Magnesium', 'Aluminium', 'Silicon', 'Potassium', 'Calcium', 'Barium', 'Iron', 'Glass_Type'])
+    dfValidate = pd.DataFrame(xValidationData, columns=['Refractive_Index', 'Sodium', 'Magnesium', 'Aluminium', 'Silicon', 'Potassium', 'Calcium', 'Barium', 'Iron', 'Glass_Type'])
+    dfTest = pd.DataFrame(xTestData, columns=['Refractive_Index', 'Sodium', 'Magnesium', 'Aluminium', 'Silicon', 'Potassium', 'Calcium', 'Barium', 'Iron', 'Glass_Type'])
     
+    inputHiddenWeights, hiddenOutputWeights = train(dfTrain, dfValidate)
     
+    (expectedOutputList, actualOutputList) = test(inputHiddenWeights, hiddenOutputWeights, dfTest)
     
-    # (expectedOutputList, actualOutputList) = test(weights1, weights2)
+    percision = precision_score(expectedOutputList, actualOutputList, average='weighted')
+    recall = recall_score(expectedOutputList, actualOutputList, average='weighted')
     
-    # percision = precision_score(expectedOutputList, actualOutputList, average='weighted')
-    # recall = recall_score(expectedOutputList, actualOutputList, average='weighted')
-    # 
-    # with open('output.txt', 'a') as outputFile:
-        # outputFile.write("\nFinal weight 1: %s" % str(weights1))
-        # outputFile.write("\nFinal weight 2: %s\n" % str(weights2))
-        # outputFile.write("Percision score: %.2f\n" % percision)
-        # outputFile.write("Recall score: %.2f\n" % recall)
-        # outputFile.write("\nConfusion matrix: \n%s" % confusion_matrix(expectedOutputList, actualOutputList))
-# 
-    # externalToolTraining(percision, recall)
+    with open('output.txt', 'a') as outputFile:
+        outputFile.write("\nFinal weights input -> hidden: ")
+        outputFile.write(str(inputHiddenWeights))
+        outputFile.write("\nFinal weights hidden -> output: ")
+        outputFile.write(str(hiddenOutputWeights))
+        outputFile.write("\nPercision score: %.2f\n" % percision)
+        outputFile.write("\nRecall score: %.2f\n" % recall)
+        outputFile.write("\nConfusion matrix: \n%s" % confusion_matrix(expectedOutputList, actualOutputList))
 
 main()
