@@ -4,6 +4,7 @@ import numpy as np
 from random import uniform
 from random import randint
 import math
+from sklearn.model_selection import StratifiedShuffleSplit
 
 numInputNodes = 9
 numOutputNodes = 6  # 6 types of glass
@@ -12,13 +13,12 @@ numHiddenNodes = 0
 
 successCount = 0
 totalCount = 0
-learningRate = 0.05
+learningRate = 1
 
 # Retrieves data from row
 def parseRow(row):
     values = []
-    # values.append(float(row[1][1]))
-    # Skip row[1][1] since it's the ID
+    values.append(float(row[1][1]))
     values.append(float(row[1][2]))
     values.append(float(row[1][3]))
     values.append(float(row[1][4]))
@@ -26,8 +26,8 @@ def parseRow(row):
     values.append(float(row[1][6]))
     values.append(float(row[1][7]))
     values.append(float(row[1][8]))
-    values.append(float(row[1][9]))
-    values.append(int(row[1][10]))
+    values.append(int(row[1][9]))
+
     return values
 
 # Object to store the max values from each column
@@ -58,7 +58,7 @@ def normalizeData(maxVals, df):
 
 # Used column headers to easily import the data in columns for more efficient normalizing
 def importCSV(filename):
-    df = pd.read_csv(filename)
+    df = pd.read_csv(filename, usecols=["Refractive_Index", "Sodium", "Magnesium", "Aluminium", "Silicon", "Potassium", "Calcium", "Barium", "Iron", "Glass_Type"])
 
     maxVals = MaxValues()
     maxVals.refractiveIndex = max(df['Refractive_Index'])
@@ -153,9 +153,31 @@ def calcHiddenWeights(inputValues, inputHiddenWeights, hiddenOutputWeights, delt
 
     return newWeights
 
+def splitData(x, y):
+    sss = StratifiedShuffleSplit(n_splits=5, test_size=0.3, random_state=0)
+    xTrainData = []
+    yTrainData = []
+    xTempData = []
+    yTempData = []
+    xValidationData = []
+    yValidationData = []
+    xTestData = []
+    yTestData = []
+    
+    for train_index, temp_index in sss.split(x, y):
+        xTrainData, xTempData = x[train_index], x[temp_index]
+        yTrainData, yTempData = y[train_index], y[temp_index]
+        
+    sss = StratifiedShuffleSplit(n_splits=5, test_size=0.5, random_state=0)
+
+    for validation_index, test_index in sss.split(x[temp_index], y[temp_index]):
+        xValidationData, xTestData = x[validation_index], x[test_index]
+        yValidationData, yTestData = y[validation_index], y[test_index]
+        
+    return (xTrainData, yTrainData, xValidationData, yValidationData, xTestData, yTestData)
+
 # Split data 70%, 15%, 15%
-def train():
-    df = importCSV('GlassData.csv')
+def train(df):
 
     global totalCount
     global successCount
@@ -163,8 +185,6 @@ def train():
     global numOutputNodes
     global numHiddenLayers
     global numHiddenNodes
-
-    # numHiddenNodes = randint(numOutputNodes, numInputNodes)
 
     # Creates two 2D arrays with floating point numbers between -1 and 1.
     # The first is for the weights between the input nodes and the hidden nodes
@@ -197,6 +217,14 @@ def train():
         termCriteria = "\nTermination criteria: The termination criteria used is the program will run for the number of iterations specified"
         termCriteria += ", or until the success rate is above 90%% for %d runthroughs of the data." % trainThreshold
         outputFile.write(termCriteria)
+        layersUsed = "\nNumber of layers used: 3, because there is an input and output layer, as well as 1 hidden layer since the data was not linearly seperable. The reason for only 1 hidden layer is because there is NOT a significant increase in performance if more than one hidden layer is added."
+        outputFile.write(layersUsed)
+        inputNodes = "\nNumber of input nodes: 9, because there are 9 input features used to classify the glass."
+        outputFile.write(inputNodes)
+        outputNodes = "\nNumber of output nodes: 6, because there are 6 different types of glass. Since a sigmoid function is being used, there needed to be 1 node per type of output."
+        outputFile.write(outputNodes)
+        hiddenNodes = "\nNumber of hidden nodes: 7, because there are supposed to be enough nodes to be between the number of input nodes and output nodes."
+        outputFile.write(hiddenNodes)
 
     successRate = 0
     trained = 0
@@ -215,6 +243,13 @@ def train():
         successCount = 0
         successRate = 0
         
+        d = {'1': [1,0,0,0,0,0]}
+        d['2'] = [0,1,0,0,0,0]
+        d['3'] = [0,0,1,0,0,0]
+        d['5'] = [0,0,0,1,0,0]
+        d['6'] = [0,0,0,0,1,0]
+        d['7'] = [0,0,0,0,0,1]
+
         # Iterate over dataframe row
         for row in df.iterrows():
             inputValues = parseRow(row)
@@ -223,20 +258,13 @@ def train():
             hiddenValues = calcOutput(inputHiddenWeights, inputValues)
             outputValues = calcOutput(hiddenOutputWeights, hiddenValues)
 
-            d = {'1': [1,0,0,0,0,0]}
-            d['2'] = [0,1,0,0,0,0]
-            d['3'] = [0,0,1,0,0,0]
-            d['5'] = [0,0,0,1,0,0]
-            d['6'] = [0,0,0,0,1,0]
-            d['7'] = [0,0,0,0,0,1]
-
             # The first parameter passed in is the index of the output nodes array with the max value
             # Represented as an array of zeros with one 1. If the 1 is in the third element, the output is 3
             actualGlassType = evaluateGlassType(outputValues.index(max(outputValues)), d)
             expectedGlassType = d[str(inputValues[-1])]
 
             # If the expectedOutput first bit is equal to the output of the first node
-            if actualGlassType  == expectedGlassType:
+            if actualGlassType == expectedGlassType:
                 successCount += 1
 
             totalCount += 1
@@ -355,7 +383,18 @@ def externalToolTraining(percision, recall):
         outputFile.write("My code: %.2f\n" % recall)
 
 def main():
-    inputHiddenWeights, hiddenOutputWeights = train()
+    df = importCSV('GlassData.csv')
+    outputData = df['Glass_Type']
+
+    # Converts to numpy array
+    data = df.values
+    xTrainData, yTrainData, xValidationData, yValidationData, xTestData, yTestData = splitData(data, outputData)
+
+    print(xTrainData)
+    inputHiddenWeights, hiddenOutputWeights = train(xTrainData)
+    
+    
+    
     # (expectedOutputList, actualOutputList) = test(weights1, weights2)
     
     # percision = precision_score(expectedOutputList, actualOutputList, average='weighted')
