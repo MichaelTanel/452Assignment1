@@ -177,6 +177,7 @@ def splitData(x, y):
     return (xTrainData, yTrainData, xValidationData, yValidationData, xTestData, yTestData)
 
 # Split data 70%, 15%, 15%
+
 def train(df):
 
     global totalCount
