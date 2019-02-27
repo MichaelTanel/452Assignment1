@@ -12,6 +12,7 @@ numHiddenNodes = 0
 
 successCount = 0
 totalCount = 0
+learningRate = 0.05
 
 # Retrieves data from row
 def parseRow(row):
@@ -118,25 +119,39 @@ def evaluateGlassType(value, d):
 def calcDeltaJ(d, y):
     output = [0 for x in range(len(y))]
     for i in range(len(y)):
-        output[i] = (int(d[i]) - int(y[i])) * int(y[i]) * (1 - int(y[i]))
-
+        output[i] = (d[i] - y[i]) * y[i] * (1 - y[i])
     return output
 
-# y and d are actual and expected values arrays respectively
-def calcOutputWeights(hiddenValues, hiddenOutputWeights, d, y, deltaJOutput):
-    
-    learningRate = 0.05
+def calcOutputWeights(hiddenValues, hiddenOutputWeights, deltaJOutput):
+    global learningRate    
     newWeights = hiddenOutputWeights.copy()
 
     # hiddenOutputWeights and deltaJOutput are the same length lists always
     for i in range(len(hiddenOutputWeights)):
         for j in range(len(hiddenOutputWeights[i])):
-            newWeights[i][j] = learningRate * hiddenValues[i] * deltaJOutput[i]
+            newWeights[i][j] = hiddenOutputWeights[i][j] + learningRate * hiddenValues[i] * deltaJOutput[i]
 
     return newWeights
 
-def calcHiddenWeights():
-    num = 1
+def calcHiddenWeights(inputValues, inputHiddenWeights, hiddenOutputWeights, deltaJOutput, y):
+    global learningRate
+    newWeights = inputHiddenWeights.copy()
+    output = [0 for x in range(len(hiddenOutputWeights[0]))]
+
+    # Calculate the sum of deltaJ * weights between hidden and output nodes
+    for i in range(len(hiddenOutputWeights[0])):
+        sum = 0
+        for j in range(len(hiddenOutputWeights)):
+            sum += deltaJOutput[j] * newWeights[j][i]
+        output[i] = sum
+    
+    # Calculate new weights
+    for i in range(len(inputHiddenWeights)):
+        tempVal = learningRate * inputValues[i] * output[i] * y[i] * (1 - y[i])
+        for j in range(len(inputHiddenWeights[0])):
+            newWeights[i][j] = inputHiddenWeights[i][j] + tempVal
+
+    return newWeights
 
 # Split data 70%, 15%, 15%
 def train():
@@ -173,7 +188,7 @@ def train():
         outputFile.write("\nInitial weights hidden -> output: ")
         outputFile.write(str(hiddenOutputWeights))
         
-    iterations = 2000
+    iterations = 1000
     trainThreshold = 25
 
     with open('output.txt', 'a') as outputFile:
@@ -208,14 +223,15 @@ def train():
             hiddenValues = calcOutput(inputHiddenWeights, inputValues)
             outputValues = calcOutput(hiddenOutputWeights, hiddenValues)
 
-            d = {'1': "100000"}
-            d['2'] = "010000"
-            d['3'] = "001000"
-            d['5'] = "000100"
-            d['6'] = "000010"
-            d['7'] = "000001"
+            d = {'1': [1,0,0,0,0,0]}
+            d['2'] = [0,1,0,0,0,0]
+            d['3'] = [0,0,1,0,0,0]
+            d['5'] = [0,0,0,1,0,0]
+            d['6'] = [0,0,0,0,1,0]
+            d['7'] = [0,0,0,0,0,1]
 
             # The first parameter passed in is the index of the output nodes array with the max value
+            # Represented as an array of zeros with one 1. If the 1 is in the third element, the output is 3
             actualGlassType = evaluateGlassType(outputValues.index(max(outputValues)), d)
             expectedGlassType = d[str(inputValues[-1])]
 
@@ -225,9 +241,9 @@ def train():
 
             totalCount += 1
 
-            deltaJOutput = calcDeltaJ(expectedGlassType, actualGlassType)
-            hiddenOutputWeights = calcOutputWeights(hiddenValues, hiddenOutputWeights, expectedGlassType, actualGlassType, deltaJOutput)
-            calcHiddenWeights()
+            deltaJOutput = calcDeltaJ(expectedGlassType, outputValues)
+            hiddenOutputWeights = calcOutputWeights(hiddenValues, hiddenOutputWeights, deltaJOutput)
+            inputHiddenWeights = calcHiddenWeights(inputValues, inputHiddenWeights, hiddenOutputWeights, deltaJOutput, hiddenValues)
 
         successRate = float(successCount) / float(totalCount)
         print("Success rate: ", successRate)
