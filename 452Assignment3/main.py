@@ -14,6 +14,7 @@ numOutputNodes = 2  # 2 types of clusters
 
 successCount = 0
 totalCount = 0
+learningRate = 0.5
 
 # Retrieves data from row
 def parseRow(row):
@@ -28,16 +29,33 @@ def parseRow(row):
 def importCSV(filename):
     return pd.read_csv(filename)
 
-def calcOutput(inputValues, weights1, weights2):
-    output1 = 0
-    output2 = 0
-
+def calcNet(inputValues, weights1, weights2):
+    net = []
     for i in range(len(weights1)):
-        output1 += weights1[i] * inputValues[i]
-        output2 += weights2[i] * inputValues[i]
+        net[0] += weights1[i] * inputValues[i]
+        net[1] += weights2[i] * inputValues[i]
 
-    return (output1, output2)
+    return net
     
+def findWinner(net):
+    maxVal = []
+    maxVal[0] = max(0, net[0] - (1 / 2) * net[1])
+    maxVal[1] = max(0, net[1] - (1 / 2) * net[0])
+
+    while (maxVal[0] == 0 and maxVal[1] == 0) or (maxVal[0] != 0 and maxVal[1] != 0):
+        maxVal[0] = max(0, net[0] - (1 / 2) * net[1])
+        maxVal[1] = max(0, net[1] - (1 / 2) * net[0])
+
+    if maxVal[0] == 0:
+        return 0
+    else:
+        return 1
+
+def updateWeight(inputValues, weights):
+    global learningRate
+    weights = weights + learningRate * (inputValues - weights)
+    return weights
+
 def cluster(df):
 
     global numInputNodes
@@ -72,14 +90,13 @@ def cluster(df):
     for row in df.iterrows():
         inputValues = parseRow(row)
 
-        output1, output2 = calcOutput(inputValues, weights1, weights2)
+        net = calcNet(inputValues, weights1, weights2)
         # TODO: use max function to update inhibitory values?
-        max(0, output1 - 1/2 * output2)
-        # While both outputs are not 0, keep updating values
-        while output1 != 0 and output2 != 0:
-            # Update connection weight
-            num = 0
-    
+        winner = findWinner(net)
+        if winner == 0:
+            weights1 = updateWeight(inputValues, weights1)
+        else:
+            weights2 = updateWeight(inputValues, weights2)
     return 0
 
 def main():
