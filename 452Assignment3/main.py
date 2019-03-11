@@ -81,7 +81,7 @@ def calcError(inputValues, weights1, weights2):
 
     return error
 
-def cluster(df):
+def kohonen(df):
 
     global numInputNodes
     global numOutputNodes
@@ -108,10 +108,12 @@ def cluster(df):
         outputNodes = "\nNumber of output nodes: 2, because there are 2 different clusters."
         outputFile.write(outputNodes)
 
+    # Stores the results of the clustering function
     results = [0] * len(df.index)
-    i = 0
+    prevCalcError = 0
 
-    for i in range(1000):
+    for i in range(100):
+        j = 0
         # Iterate over dataframe row
         for row in df.iterrows():
             inputValues = parseRow(row)
@@ -119,35 +121,100 @@ def cluster(df):
             net = calcNet(inputValues, weights1, weights2)
 
             winner = findWinner(net)
+
             if winner == 0:
                 weights1 = updateWeight(inputValues, weights1)
-                # Store the result in an array. The +1 is because winner can be 1 or 0
-                results[i] = winner + 1
+                results[j] = winner + 1
             elif winner == 1:
                 weights2 = updateWeight(inputValues, weights2)
-                # Store the result in an array. The +1 is because winner can be 1 or 0
-                results[i] = winner + 1
+                results[j] = winner + 1
             else:
                 # Randomly choose a winner
-                results[i] = random.randint(1, 2)
+                results[j] = random.randint(1, 2)
             
-            i += 1
-        calcError(inputValues, weights1, weights2)
+            j += 1
+
+        # If it is the first iteration, there's no previous error calc to compare it to.
+        # If it is not the first iteration, calculate the error and compare it to the previous error.
+        # If the new error is less than previous error, stop looping.
+        if i == 0:
+            prevCalcError = calcError(inputValues, weights1, weights2)
+        else:
+            tmpCalcError = calcError(inputValues, weights1, weights2)
+            print(i)
+            print(prevCalcError)
+            print(tmpCalcError)
+            print("-------------------")
+            if tmpCalcError > prevCalcError:
+                print(i)
+                break
+            prevCalcError = tmpCalcError
 
     return (weights1, weights2, results)
+
+def calcDistance(inputValues, df):
+    # Retrive 2 random points as "clusters"
+    cluster1Index = randint(0, len(df.index) - 1)
+    cluster2Index = randint(0, len(df.index) - 1)
+
+    cluster1 = df.iloc[cluster1Index]
+    cluster2 = df.iloc[cluster2Index]
+
+    distance1 = math.sqrt((cluster1[0] - inputValues[0]) ** 2 + (cluster1[1] - inputValues[1]) ** 2 + (cluster1[2] - inputValues[2]) ** 2)
+    distance2 = math.sqrt((cluster2[0] - inputValues[0]) ** 2 + (cluster2[1] - inputValues[1]) ** 2 + (cluster2[2] - inputValues[2]) ** 2)
+
+    if distance1 < distance2:
+        return 1
+    elif distance1 > distance2:
+        return 2
+    else:
+        return randint(1, 2)
+
+def kMeans(df):
+    # Stores the results of the clustering function
+    results = [0] * len(df.index)
+    prevCalcError = 0
+
+    
+
+    # for i in range(1):
+        # j = 0
+        # Iterate over dataframe row
+    for row in df.iterrows():
+        inputValues = parseRow(row)
+        
+        results = calcDistance(inputValues, df)
+            
+
+        # If it is the first iteration, there's no previous error calc to compare it to.
+        # If it is not the first iteration, calculate the error and compare it to the previous error.
+        # If the new error is less than previous error, stop looping.
+        # if i == 0:
+        #     prevCalcError = calcError(inputValues, weights1, weights2)
+        # else:
+        #     tmpCalcError = calcError(inputValues, weights1, weights2)
+
+        #     if tmpCalcError > prevCalcError:
+        #         print(i)
+        #         break
+        #     prevCalcError = tmpCalcError
+
+    return results
+
 
 def main():
     df = importCSV('dataset_noclass.csv')
     
-    weights1, weights2, results = cluster(df)
+    # weights1, weights2, results = kohonen(df)
+    kMeans(df)
 
     # percision = precision_score(expectedOutputList, actualOutputList, average='weighted')
     # recall = recall_score(expectedOutputList, actualOutputList, average='weighted')
     
     with open('output.txt', 'a') as outputFile:
         outputFile.write("\nFinal weights: ")
-        outputFile.write(str(weights1))
-        outputFile.write(str(weights2))
+        # outputFile.write(str(weights1))
+        # outputFile.write(str(weights2))
         # outputFile.write("\nPercision score: %.2f\n" % percision)
         # outputFile.write("\nRecall score: %.2f\n" % recall)
         # outputFile.write("\nConfusion matrix: \n%s" % confusion_matrix(expectedOutputList, actualOutputList))
