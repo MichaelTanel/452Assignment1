@@ -5,9 +5,6 @@ from random import uniform
 from random import randint
 import math
 from sklearn.model_selection import StratifiedShuffleSplit
-from sklearn.metrics import precision_score
-from sklearn.metrics import recall_score
-from sklearn.metrics import confusion_matrix
 from shutil import copyfile
 
 numInputNodes = 3
@@ -75,13 +72,15 @@ def updateWeight(inputValues, weights):
 
     return weights
 
-def calcError(inputValues, weights1, weights2):
-    error = 0
+# Calculates the Kohonen error
+def calcKohonenError(inputValues, weights1, weights2):
+    error1 = 0
+    error2 = 0
     for i in range(len(inputValues)):
-        error += (inputValues[i] - weights1[i]) ** 2
-        error += (inputValues[i] - weights2[i]) ** 2
+        error1 += (inputValues[i] - weights1[i]) ** 2
+        error2 += (inputValues[i] - weights2[i]) ** 2
 
-    return error
+    return error1, error2
 
 def kohonen(df):
 
@@ -99,21 +98,26 @@ def kohonen(df):
     open('output.txt', 'w')
     # Appends to new file
     with open('output.txt', 'a') as outputFile:
-        outputFile.write("Initial weights: ")
+        outputFile.write("Part 1: Kohonen")
+        outputFile.write("\n-----------------------------")
+        outputFile.write("\nInitial weights: ")
         outputFile.write(str(weights1))
         outputFile.write("\n")
         outputFile.write(str(weights2))
-        # TODO: fix term criteria
         termCriteria = "\nTermination criteria: The termination criteria used is the program will run for however many rows of data there are."
+        termCriteria += "If the clustering error increases after each epoch (iteration), then the program will also terminate."
         outputFile.write(termCriteria)
         inputNodes = "\nNumber of input nodes: 3, because there are 3 inputs."
         outputFile.write(inputNodes)
         outputNodes = "\nNumber of output nodes: 2, because there are 2 different clusters."
         outputFile.write(outputNodes)
+        outputFile.write("\nWhen there is no clear winner, a random one is chosen.")
 
     # Stores the results of the clustering function
     results = [0] * len(df.index)
     prevCalcError = 0
+    error1 = 0
+    error2 = 0
 
     for i in range(iterations):
         j = 0
@@ -125,6 +129,7 @@ def kohonen(df):
 
             winner = findWinner(net)
 
+            # Adding +1 so that it corresponds to output nodes 1 and 2, not 0 and 1
             if winner == 0:
                 weights1 = updateWeight(inputValues, weights1)
                 results[j] = winner + 1
@@ -141,24 +146,29 @@ def kohonen(df):
         # If it is not the first iteration, calculate the error and compare it to the previous error.
         # If the new error is greater than previous error, stop looping.
         if i == 0:
-            prevCalcError = calcError(inputValues, weights1, weights2)
+            error1, error2 = calcKohonenError(inputValues, weights1, weights2)
+            prevCalcError = error1 + error2
         else:
-            newCalcError = calcError(inputValues, weights1, weights2)
-
+            error1, error2 = calcKohonenError(inputValues, weights1, weights2)
+            newCalcError = error1 + error2
             if newCalcError > prevCalcError:
-                print(i)
                 break
             prevCalcError = newCalcError
 
-    # copyfile("dataset_noclass.csv", "kohonen_results.csv")
-    dfNew = pd.read_csv('dataset_noclass.csv')
-    # Removes the first line (headers)
-    # dfNew = dfNew.iloc[1:]
-    dfNew['output'] = results
-    dfNew.to_csv('kohonen_results.csv')
-        
+    with open('output.txt', 'a') as outputFile:
+        outputFile.write("\nSum squared error for cluster center 1:")
+        outputFile.write(str(error1))
+        outputFile.write("\nSum squared error for cluster center 2:")
+        outputFile.write(str(error2))
+        outputFile.write("\nSum squared error for both cluster centers:")
+        outputFile.write(str(newCalcError))
+        outputFile.write("\nFinal weights: ")
+        outputFile.write(str(weights1))
+        outputFile.write(str(weights2))
+
     return (weights1, weights2, results)
 
+# Calculates which prototype the point being analyzed is closest to.
 def calcDistance(inputValues, prototype1, prototype2):
     distance1 = math.sqrt((prototype1[0] - inputValues[0]) ** 2 + (prototype1[1] - inputValues[1]) ** 2 + (prototype1[2] - inputValues[2]) ** 2)
     distance2 = math.sqrt((prototype2[0] - inputValues[0]) ** 2 + (prototype2[1] - inputValues[1]) ** 2 + (prototype2[2] - inputValues[2]) ** 2)
@@ -186,16 +196,17 @@ def updatePrototype(cluster1, cluster2):
     return prototype1, prototype2
 
 def calcKMeansError(inputValues, prototype1, prototype2):
-    error = np.sum(np.square(np.subtract(inputValues, prototype1)))
-    error += np.sum(np.square(np.subtract(inputValues, prototype2)))
-    return error
+    error1 = np.sum(np.square(np.subtract(inputValues, prototype1)))
+    error2 = np.sum(np.square(np.subtract(inputValues, prototype2)))
+    
+    return error1, error2
 
 # Implementing the k-means algorithm
 def kMeans(df):
 
     global iterations
     # Stores the results of the clustering function
-    results = [0] * (len(df.index) - 2)
+    results = [0] * len(df.index)
     prevCalcError = 0
 
     # Retrive 2 random points as the basiss for a "cluster"
@@ -215,6 +226,13 @@ def kMeans(df):
     cluster1 = []
     cluster2 = []
 
+    error1 = 0
+    error2 = 0
+
+    with open('output.txt', 'a') as outputFile:
+        outputFile.write("\n\nPart 2: K Means")
+        outputFile.write("\n-----------------------------")
+
     for i in range(iterations):
         j = 0
         # Iterate over dataframe row
@@ -229,6 +247,7 @@ def kMeans(df):
             else:
                 cluster2.append(inputValues)
 
+            results[j] = result
             j += 1
 
         prototype1, prototype2 = updatePrototype(cluster1, cluster2)
@@ -237,13 +256,23 @@ def kMeans(df):
         # If it is not the first iteration, calculate the error and compare it to the previous error.
         # If the new error is greater than previous error, stop looping.
         if i == 0:
-            prevCalcError = calcKMeansError(inputValues, prototype1, prototype2)
+            error1, error2 = calcKMeansError(inputValues, prototype1, prototype2)
+            prevCalcError = error1 + error2
         else:
-            newCalcError = calcKMeansError(inputValues, prototype1, prototype2)
+            error1, error2 = calcKMeansError(inputValues, prototype1, prototype2)
+            newCalcError = error1 + error2
             # If the 
             if newCalcError > prevCalcError:
                 break
             prevCalcError = newCalcError
+
+    with open('output.txt', 'a') as outputFile:
+        outputFile.write("\nSum squared error for cluster center 1:")
+        outputFile.write(str(error1))
+        outputFile.write("\nSum squared error for cluster center 2:")
+        outputFile.write(str(error2))
+        outputFile.write("\nSum squared error for both cluster centers:")
+        outputFile.write(str(newCalcError))
 
     return results
 
@@ -251,18 +280,11 @@ def kMeans(df):
 def main():
     df = importCSV('dataset_noclass.csv')
     
-    weights1, weights2, results = kohonen(df)
-    kMeans(df)
-
-    # percision = precision_score(expectedOutputList, actualOutputList, average='weighted')
-    # recall = recall_score(expectedOutputList, actualOutputList, average='weighted')
-    
-    with open('output.txt', 'a') as outputFile:
-        outputFile.write("\nFinal weights: ")
-        outputFile.write(str(weights1))
-        outputFile.write(str(weights2))
-        # outputFile.write("\nPercision score: %.2f\n" % percision)
-        # outputFile.write("\nRecall score: %.2f\n" % recall)
-        # outputFile.write("\nConfusion matrix: \n%s" % confusion_matrix(expectedOutputList, actualOutputList))
+    weights1, weights2, kohoResults = kohonen(df)
+    kMeansResults = kMeans(df)
+    # Adds results from both algorithms as a new column to a copy of the input csv.
+    df['koho_output'] = kohoResults
+    df['k_means_output'] = kMeansResults
+    df.to_csv('results.csv')
 
 main()
