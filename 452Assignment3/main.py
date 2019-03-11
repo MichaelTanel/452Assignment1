@@ -14,7 +14,6 @@ numOutputNodes = 2  # 2 types of clusters
 
 successCount = 0
 totalCount = 0
-learningRate = 1
 
 # Retrieves data from row
 def parseRow(row):
@@ -25,34 +24,20 @@ def parseRow(row):
 
     return values
 
-# Object to store the max values from each column
-class MaxValues(object):
-    xValue = 0
-    yValue = 0
-    zValue = 0
-    
-# Normalizes the data by dividing each data point in each column by the columns max value
-def normalizeData(maxVals, df):
-    df['x_value'] = df['x_value'] / maxVals.xValue
-    df['y_value'] = df['y_value'] / maxVals.yValue
-    df['z_value'] = df['z_value'] / maxVals.zValue
-    
-    return df
-
 # Used column headers to easily import the data in columns for more efficient normalizing
 def importCSV(filename):
-    df = pd.read_csv(filename)
-
-    maxVals = MaxValues()
-    maxVals.xValue = max(df['x_value'])
-    maxVals.yValue = max(df['y_value'])
-    maxVals.zValue = max(df['z_value'])
-
-    return normalizeData(maxVals, df)
+    return pd.read_csv(filename)
 
 def calcOutput(inputValues, weights1, weights2):
-    return (0, 1)
+    output1 = 0
+    output2 = 0
 
+    for i in range(len(weights1)):
+        output1 += weights1[i] * inputValues[i]
+        output2 += weights2[i] * inputValues[i]
+
+    return (output1, output2)
+    
 def cluster(df):
 
     global numInputNodes
@@ -88,7 +73,8 @@ def cluster(df):
         inputValues = parseRow(row)
 
         output1, output2 = calcOutput(inputValues, weights1, weights2)
-
+        # TODO: use max function to update inhibitory values?
+        max(0, output1 - 1/2 * output2)
         # While both outputs are not 0, keep updating values
         while output1 != 0 and output2 != 0:
             # Update connection weight
