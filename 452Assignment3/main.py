@@ -30,7 +30,7 @@ def importCSV(filename):
     return pd.read_csv(filename)
 
 def calcNet(inputValues, weights1, weights2):
-    net = []
+    net = [0] * 2
     for i in range(len(weights1)):
         net[0] += weights1[i] * inputValues[i]
         net[1] += weights2[i] * inputValues[i]
@@ -38,7 +38,7 @@ def calcNet(inputValues, weights1, weights2):
     return net
     
 def findWinner(net):
-    maxVal = []
+    maxVal = [0] * 2
     maxVal[0] = max(0, net[0] - (1 / 2) * net[1])
     maxVal[1] = max(0, net[1] - (1 / 2) * net[0])
 
@@ -53,7 +53,8 @@ def findWinner(net):
 
 def updateWeight(inputValues, weights):
     global learningRate
-    weights = weights + learningRate * (inputValues - weights)
+    weights = weights + learningRate * np.subtract(inputValues, weights)
+
     return weights
 
 def cluster(df):
@@ -66,9 +67,6 @@ def cluster(df):
     # weights2 represents the weights for the connections from all input nodes to output node 2.
     weights1 = [uniform(-1, 1) for x in range(numInputNodes)]
     weights2 = [uniform(-1, 1) for x in range(numInputNodes)]
-
-    # Stores each row of the csv
-    values = []
     
     # Wipes the existing file first
     open('output.txt', 'w')
@@ -86,24 +84,37 @@ def cluster(df):
         outputNodes = "\nNumber of output nodes: 2, because there are 2 different clusters."
         outputFile.write(outputNodes)
 
+    results = [0] * len(df.index)
+    i = 0
+    print("hello")
     # Iterate over dataframe row
     for row in df.iterrows():
         inputValues = parseRow(row)
-
+        print("------------------------")
+        print(inputValues)
+        print(weights1)
+        print(weights2)
         net = calcNet(inputValues, weights1, weights2)
-        # TODO: use max function to update inhibitory values?
+
+        print("findwinner")
         winner = findWinner(net)
+        print("foundwinner")
         if winner == 0:
             weights1 = updateWeight(inputValues, weights1)
         else:
             weights2 = updateWeight(inputValues, weights2)
-    return 0
+
+        # Store the result in an array. The +1 is because winner can be 1 or 0
+        # but the results should be output 1 or 2
+        results[i] = winner + 1
+        i += 1
+    return (weights1, weights2)
 
 def main():
     df = importCSV('dataset_noclass.csv')
     
-    weights = cluster(df)
-        
+    weights1, weights2 = cluster(df)
+    
     # percision = precision_score(expectedOutputList, actualOutputList, average='weighted')
     # recall = recall_score(expectedOutputList, actualOutputList, average='weighted')
     
