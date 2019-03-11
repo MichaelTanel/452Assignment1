@@ -150,8 +150,13 @@ def kohonen(df):
                 break
             prevCalcError = newCalcError
 
-    copyfile("dataset_noclass.csv", "kohonen_results.csv")
-
+    # copyfile("dataset_noclass.csv", "kohonen_results.csv")
+    dfNew = pd.read_csv('dataset_noclass.csv')
+    # Removes the first line (headers)
+    # dfNew = dfNew.iloc[1:]
+    dfNew['output'] = results
+    dfNew.to_csv('kohonen_results.csv')
+        
     return (weights1, weights2, results)
 
 def calcDistance(inputValues, prototype1, prototype2):
@@ -190,7 +195,7 @@ def kMeans(df):
 
     global iterations
     # Stores the results of the clustering function
-    results = [0] * len(df.index)
+    results = [0] * (len(df.index) - 2)
     prevCalcError = 0
 
     # Retrive 2 random points as the basiss for a "cluster"
